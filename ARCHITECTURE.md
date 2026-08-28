@@ -11,8 +11,7 @@ flowchart LR
     UI[React dashboard] -->|/api/*| API[Express server]
     API --> LL2[Launch Library 2]
     API --> CT[CelesTrak GP]
-    API <--> DB[(SQLite LL2 cache)]
-    API <--> JSON[(CelesTrak JSON cache)]
+    API <--> DB[(Shared SQLite API cache)]
     API -. no cached response .-> BS[Bundled snapshots]
 ```
 
@@ -38,7 +37,7 @@ UI-oriented contracts returned by the server.
 - `server/schemas.ts` defines Zod contracts for external payloads.
 - `server/normalize.ts` maps external records into frontend contracts and
   derives orbital metrics.
-- `server/disk-cache.ts` stores validated LL2 payloads in SQLite.
+- `server/disk-cache.ts` stores validated LL2 and CelesTrak payloads in SQLite.
 - `server/starlink.ts` enforces the CelesTrak two-hour refresh policy.
 - `server/ll2-bootstrap.ts` and `server/bootstrap.ts` contain bounded fallback
   snapshots used only when no successful disk record exists.
@@ -64,10 +63,12 @@ SQLite keys are separated by resource:
 
 ### Starlink elements
 
-1. The service reads `.cache/starlink.json`.
+1. The service reads the `celestrak:starlink` row from
+   `.cache/mission-data.sqlite`.
 2. Data younger than two hours is summarized immediately.
 3. Expired or absent data triggers one CelesTrak group download.
-4. Successful records are validated, atomically persisted, and summarized.
+4. Successful records are validated, persisted with an atomic SQLite upsert,
+   and summarized.
 5. A failed refresh returns stale disk data or the labeled bootstrap sample.
 6. An in-process backoff prevents repeated downloads during the cooldown.
 

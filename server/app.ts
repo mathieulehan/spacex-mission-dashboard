@@ -52,12 +52,11 @@ export function createApp(options: AppOptions = {}) {
       ? path.resolve('.cache/mission-data.sqlite')
       : options.ll2CachePath,
   )
-  const starlink = new StarlinkService(
-    upstream,
+  const starlinkCache =
     options.starlinkCachePath === undefined
-      ? path.resolve('.cache/starlink.json')
-      : options.starlinkCachePath,
-  )
+      ? ll2Cache
+      : new DiskCache(options.starlinkCachePath)
+  const starlink = new StarlinkService(upstream, starlinkCache)
 
   async function getLl2<T>(
     cacheKey: string,

@@ -1,10 +1,11 @@
 import request from 'supertest'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { describe, expect, it, vi } from 'vitest'
 import { createApp } from './app.js'
+import { DiskCache } from './disk-cache.js'
 
 const launch = {
   id: 'launch-1',
@@ -279,15 +280,9 @@ describe('fresh mission data API', () => {
 
   it('reuses a fresh persistent CelesTrak cache without downloading again', async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), 'starlink-cache-'))
-    const cachePath = path.join(directory, 'starlink.json')
+    const cachePath = path.join(directory, 'mission-data.sqlite')
     try {
-      await writeFile(
-        cachePath,
-        JSON.stringify({
-          fetchedAt: new Date().toISOString(),
-          records: orbitalRecords,
-        }),
-      )
+      new DiskCache(cachePath).set('celestrak:starlink', orbitalRecords)
       const fetchMock = vi.fn<typeof fetch>()
       const app = createApp({ fetchImpl: fetchMock, starlinkCachePath: cachePath, ll2CachePath: null })
 

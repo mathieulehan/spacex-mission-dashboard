@@ -16,6 +16,12 @@ Do not describe orbital elements as live spacecraft telemetry.
 
 ## Engineering conventions
 
+- Update `README.md`, `ARCHITECTURE.md`, and other relevant Markdown in the
+  same change whenever behavior, setup, data flow, or operational requirements
+  change.
+- Make a concise, focused Git commit after each completed feature or fix.
+  Include only files related to that change and use an imperative commit
+  subject.
 - Keep upstream HTTP access server-side. Browser code calls only local `/api`
   routes.
 - Validate all external payloads in `server/schemas.ts` before normalization,
@@ -39,7 +45,8 @@ Do not describe orbital elements as live spacecraft telemetry.
   after successful validation, and serve the prior valid row on upstream
   failure.
 - CelesTrak downloads must remain at least two hours apart.
-- Persist CelesTrak writes atomically and retain cooldown backoff.
+- Persist CelesTrak records in the shared SQLite cache with atomic upserts and
+  retain cooldown backoff.
 - Bootstrap snapshots are a last resort when no disk data exists; never present
   their counts as a complete source dataset.
 

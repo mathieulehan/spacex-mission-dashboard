@@ -85,7 +85,8 @@ launch, event, and detail payloads are stored in
 After expiry, the next request refreshes the row; if LL2 is rate-limited or
 unavailable, the last valid row is served with a stale marker instead.
 
-CelesTrak data is stored in `.cache/starlink.json` for two hours to respect its
+CelesTrak records use the same SQLite database under the
+`celestrak:starlink` key and remain fresh for two hours to respect the provider's
 download policy. During an outage or cooldown, the last successful dataset is
 served. If no cache exists, the app uses a clearly labeled six-record bootstrap
 sample.

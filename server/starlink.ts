@@ -1,24 +1,16 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import path from 'node:path'
 import {
   STARLINK_BOOTSTRAP_FETCHED_AT,
   STARLINK_BOOTSTRAP_RECORDS,
 } from './bootstrap.js'
+import { DiskCache } from './disk-cache.js'
 import { summarizeStarlink } from './normalize.js'
-import {
-  celestrakRecordsSchema,
-  type CelestrakRecord,
-} from './schemas.js'
+import { celestrakRecordsSchema } from './schemas.js'
 import { UpstreamClient, UpstreamError } from './upstream.js'
 
 const CELESTRAK_URL =
   'https://celestrak.org/NORAD/elements/gp.php?GROUP=starlink&FORMAT=json'
 const REFRESH_INTERVAL_MS = 2 * 60 * 60 * 1_000
-
-type DiskCache = {
-  fetchedAt: string
-  records: CelestrakRecord[]
-}
+const CACHE_KEY = 'celestrak:starlink'
 
 export class StarlinkService {
   private blockedUntil = 0
@@ -26,20 +18,23 @@ export class StarlinkService {
 
   constructor(
     private readonly upstream: UpstreamClient,
-    private readonly cachePath: string | null,
+    private readonly cache: DiskCache,
   ) {}
 
   async getSummary() {
-    const cached = await this.readCache()
+    const cached = this.cache.get(CACHE_KEY, celestrakRecordsSchema)
+    const cachedAt = cached
+      ? new Date(cached.fetchedAt).toISOString()
+      : STARLINK_BOOTSTRAP_FETCHED_AT
     if (
       cached &&
-      Date.now() - Date.parse(cached.fetchedAt) < REFRESH_INTERVAL_MS
+      Date.now() - cached.fetchedAt < REFRESH_INTERVAL_MS
     ) {
-      return summarizeStarlink(cached.records, cached.fetchedAt, false)
+      return summarizeStarlink(cached.value, cachedAt, false)
     }
     if (Date.now() < this.blockedUntil && this.blockedError) {
       if (cached) {
-        return summarizeStarlink(cached.records, cached.fetchedAt, true)
+        return summarizeStarlink(cached.value, cachedAt, true)
       }
       return summarizeStarlink(
         STARLINK_BOOTSTRAP_RECORDS,
@@ -57,7 +52,7 @@ export class StarlinkService {
         REFRESH_INTERVAL_MS / 1_000,
       )
       const fetchedAt = new Date().toISOString()
-      await this.writeCache({ fetchedAt, records })
+      this.cache.set(CACHE_KEY, records, Date.parse(fetchedAt))
       return summarizeStarlink(records, fetchedAt, false)
     } catch (error) {
       const exposedError =
@@ -73,7 +68,7 @@ export class StarlinkService {
         this.blockedError = exposedError
       }
       if (cached) {
-        return summarizeStarlink(cached.records, cached.fetchedAt, true)
+        return summarizeStarlink(cached.value, cachedAt, true)
       }
       return summarizeStarlink(
         STARLINK_BOOTSTRAP_RECORDS,
@@ -84,32 +79,4 @@ export class StarlinkService {
     }
   }
 
-  private async readCache(): Promise<DiskCache | null> {
-    if (!this.cachePath) return null
-    try {
-      const value = JSON.parse(await readFile(this.cachePath, 'utf8')) as {
-        fetchedAt?: unknown
-        records?: unknown
-      }
-      if (typeof value.fetchedAt !== 'string') return null
-      const records = celestrakRecordsSchema.safeParse(value.records)
-      return records.success
-        ? { fetchedAt: value.fetchedAt, records: records.data }
-        : null
-    } catch (error) {
-      const code =
-        error && typeof error === 'object' && 'code' in error ? error.code : null
-      if (code === 'ENOENT') return null
-      throw error
-    }
-  }
-
-  private async writeCache(cache: DiskCache) {
-    if (!this.cachePath) return
-    const directory = path.dirname(this.cachePath)
-    const temporaryPath = `${this.cachePath}.tmp`
-    await mkdir(directory, { recursive: true })
-    await writeFile(temporaryPath, JSON.stringify(cache), 'utf8')
-    await rename(temporaryPath, this.cachePath)
-  }
 }

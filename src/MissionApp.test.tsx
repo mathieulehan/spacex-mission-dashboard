@@ -64,8 +64,9 @@ describe('MissionApp', () => {
     expect(await screen.findByText('8,100')).toBeInTheDocument()
     expect(screen.getByText('STARLINK-1008')).toBeInTheDocument()
     expect(
-      screen.getByRole('img', { name: /Calculated positions for 2 sampled/ }),
+      await screen.findByRole('img', { name: /Interactive 3D Earth with 2 calculated/ }),
     ).toBeInTheDocument()
+    expect(screen.getByText('Drag to rotate')).toBeInTheDocument()
     expect(screen.getByText(/not live telemetry/)).toBeInTheDocument()
     expect(
       await screen.findByRole('heading', { name: 'Data cache status' }),

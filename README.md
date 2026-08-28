@@ -21,7 +21,8 @@ perturbations data is orbital element data, not live spacecraft telemetry.
   update information.
 - SpaceX event cards with visible webcast and detail actions.
 - Starlink orbital summary and sampled RAAN/inclination visualization.
-- Approximate Starlink ground-position map propagated from orbital elements.
+- Interactive 3D Earth with approximate Starlink positions propagated from
+  orbital elements.
 - Runtime validation of upstream payloads with Zod.
 - Persistent disk caching and explicit stale/bootstrap states when upstream
   services are rate-limited.
@@ -67,6 +68,11 @@ Launch reminder links generate local `.ics` files containing the current launch
 window, location, status, mission description, and LL2 source URL. Calendar
 events are marked tentative because launch schedules can move; refresh the
 dashboard and export a new event after schedule changes.
+
+The Starlink globe is rendered locally with Three.js. Drag it to rotate the
+Earth and inspect the constellation distribution. Its continent texture is
+generated in the browser, so the visualization requires no external map tiles
+or imagery service.
 
 Production:
 

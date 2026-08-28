@@ -8,7 +8,7 @@ Do not describe orbital elements as live spacecraft telemetry.
 
 ## Stack and layout
 
-- React 19, TypeScript, Vite, and TanStack Query in `src/`.
+- React 19, TypeScript, Vite, TanStack Query, and Three.js in `src/`.
 - Express 5 and Zod in `server/`.
 - Vitest and Testing Library for tests.
 - Node.js 22.5+ is required because the LL2 disk cache uses `node:sqlite`.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Countdown, ErrorState, ExternalLink, Loading, SectionHeading } from './components'
 import { missionApi } from './api'
@@ -8,6 +8,10 @@ import { formatDate, formatNumber, relativeTime } from './utils'
 import './styles.css'
 
 const queryDefaults = { retry: 1, refetchOnWindowFocus: false }
+const EarthGlobe = lazy(async () => {
+  const module = await import('./EarthGlobe')
+  return { default: module.EarthGlobe }
+})
 
 function statusTone(status: string) {
   const value = status.toLowerCase()
@@ -542,32 +546,6 @@ function OrbitPlot({ data }: { data: StarlinkSummary }) {
   )
 }
 
-function PositionMap({ data }: { data: StarlinkSummary }) {
-  return (
-    <div
-      className="position-map"
-      role="img"
-      aria-label={`Calculated positions for ${data.positions.length} sampled Starlink objects`}
-    >
-      <div className="position-map__graticule" />
-      <span className="position-map__label position-map__label--north">90° N</span>
-      <span className="position-map__label position-map__label--south">90° S</span>
-      <span className="position-map__label position-map__label--west">180° W</span>
-      <span className="position-map__label position-map__label--east">180° E</span>
-      {data.positions.map((position) => (
-        <i
-          key={position.id}
-          title={`${position.name}: ${position.latitude.toFixed(1)}°, ${position.longitude.toFixed(1)}° · ${position.altitudeKm.toFixed(0)} km`}
-          style={{
-            left: `${((position.longitude + 180) / 360) * 100}%`,
-            top: `${((90 - position.latitude) / 180) * 100}%`,
-          }}
-        />
-      ))}
-    </div>
-  )
-}
-
 function StarlinkSection() {
   const starlink = useQuery({
     queryKey: ['starlink'],
@@ -616,7 +594,9 @@ function StarlinkSection() {
                 positions, not live telemetry.
               </p>
             </div>
-            <PositionMap data={starlink.data} />
+            <Suspense fallback={<div className="earth-globe earth-globe--loading">Preparing 3D Earth…</div>}>
+              <EarthGlobe data={starlink.data} />
+            </Suspense>
           </div>
           <div className="orbit-layout">
             <div>

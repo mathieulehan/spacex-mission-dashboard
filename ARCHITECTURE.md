@@ -88,10 +88,17 @@ SQLite keys are separated by resource:
 
 Orbital altitude is derived from mean motion using the Earth gravitational
 parameter and radius. The plot is a sampled RAAN-versus-inclination view, not a
-live telemetry view. The ground-position map advances mean anomaly from each
-element epoch and rotates the resulting orbital-plane vector by Greenwich
-sidereal time. This lightweight two-body projection is intentionally labeled
-approximate; it is not an SGP4 ephemeris or a live spacecraft position.
+live telemetry view. The 3D globe advances mean anomaly from each element epoch
+and rotates the resulting orbital-plane vector by Greenwich sidereal time.
+`src/EarthGlobe.tsx` maps those coordinates onto a lit Three.js sphere with a
+locally generated continent texture and draggable rotation. This lightweight
+two-body projection is intentionally labeled approximate; it is not an SGP4
+ephemeris or a live spacecraft position.
+
+The globe renderer is lazy-loaded as a separate browser chunk because it is
+below the fold and Three.js is substantially larger than the primary
+dashboard. Mission and event content therefore remains available without
+waiting for the 3D engine.
 
 ## Data boundaries
 

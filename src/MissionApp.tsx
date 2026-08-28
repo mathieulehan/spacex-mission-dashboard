@@ -99,12 +99,40 @@ function MissionCard({
 
 function LaunchesSection() {
   const [selected, setSelected] = useState<Launch | null>(null)
+  const [search, setSearch] = useState('')
+  const [rocket, setRocket] = useState('all')
   const launches = useQuery({
     queryKey: ['launches'],
     queryFn: missionApi.launches,
     staleTime: 600_000,
     ...queryDefaults,
   })
+  const searchValue = search.trim().toLowerCase()
+  const rockets = Array.from(
+    new Set(launches.data?.results.map((launch) => launch.rocket) ?? []),
+  ).sort()
+  const filteredLaunches =
+    launches.data?.results.filter((launch) => {
+      const searchable = [
+        launch.name,
+        launch.missionName,
+        launch.rocket,
+        launch.location,
+        launch.orbit,
+        launch.status.name,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return (
+        (!searchValue || searchable.includes(searchValue)) &&
+        (rocket === 'all' || launch.rocket === rocket)
+      )
+    }) ?? []
+  const manifestLaunches =
+    searchValue || rocket !== 'all'
+      ? filteredLaunches
+      : filteredLaunches.slice(1)
 
   return (
     <>
@@ -137,16 +165,35 @@ function LaunchesSection() {
                   : 'Using the last successful LL2 response stored on disk while the upstream service recovers.'}
               </p>
             )}
-            <div className="mission-grid">
-              {launches.data.results.slice(1).map((launch, index) => (
+            <div className="filter-bar" aria-label="Mission filters">
+              <label>
+                <span>Search missions</span>
+                <input
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Mission, site, orbit, status..."
+                />
+              </label>
+              <label>
+                <span>Rocket</span>
+                <select value={rocket} onChange={(event) => setRocket(event.target.value)}>
+                  <option value="all">All rockets</option>
+                  {rockets.map((name) => <option value={name} key={name}>{name}</option>)}
+                </select>
+              </label>
+              <span className="filter-count">{manifestLaunches.length} shown</span>
+            </div>
+            {manifestLaunches.length ? <div className="mission-grid">
+              {manifestLaunches.map((launch) => (
                 <MissionCard
                   launch={launch}
-                  index={index + 1}
+                  index={launches.data.results.indexOf(launch)}
                   onSelect={setSelected}
                   key={launch.id}
                 />
               ))}
-            </div>
+            </div> : <div className="empty">No missions match these filters.</div>}
           </>
         )}
       </section>
@@ -376,12 +423,34 @@ function EventCard({ event }: { event: SpaceEvent }) {
 }
 
 function EventsSection() {
+  const [search, setSearch] = useState('')
+  const [eventType, setEventType] = useState('all')
   const events = useQuery({
     queryKey: ['events'],
     queryFn: missionApi.events,
     staleTime: 600_000,
     ...queryDefaults,
   })
+  const searchValue = search.trim().toLowerCase()
+  const eventTypes = Array.from(
+    new Set(events.data?.results.map((event) => event.type) ?? []),
+  ).sort()
+  const filteredEvents =
+    events.data?.results.filter((event) => {
+      const searchable = [
+        event.name,
+        event.description,
+        event.location,
+        event.type,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return (
+        (!searchValue || searchable.includes(searchValue)) &&
+        (eventType === 'all' || event.type === eventType)
+      )
+    }) ?? []
   return (
     <section className="section" id="events">
       <SectionHeading index="02" eyebrow="Operations" title="Upcoming events" description="Static fires, mission milestones, and other SpaceX activity." />
@@ -396,7 +465,28 @@ function EventsSection() {
                 : 'Using the last successful LL2 event response stored on disk.'}
             </p>
           )}
-          <div className="event-grid">{events.data.results.map((event) => <EventCard event={event} key={event.id} />)}</div>
+          <div className="filter-bar" aria-label="Event filters">
+            <label>
+              <span>Search events</span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Event, type, location..."
+              />
+            </label>
+            <label>
+              <span>Event type</span>
+              <select value={eventType} onChange={(event) => setEventType(event.target.value)}>
+                <option value="all">All event types</option>
+                {eventTypes.map((type) => <option value={type} key={type}>{type}</option>)}
+              </select>
+            </label>
+            <span className="filter-count">{filteredEvents.length} shown</span>
+          </div>
+          {filteredEvents.length ? (
+            <div className="event-grid">{filteredEvents.map((event) => <EventCard event={event} key={event.id} />)}</div>
+          ) : <div className="empty">No events match these filters.</div>}
         </>
       ) : <div className="empty">No upcoming events are currently listed.</div>}
     </section>

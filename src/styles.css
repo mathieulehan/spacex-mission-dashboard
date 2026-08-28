@@ -37,7 +37,7 @@ body::before {
   content: '';
 }
 a { color: inherit; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 4px; }
 
 .header, main, footer { width: var(--page); margin: 0 auto; }
@@ -276,6 +276,41 @@ nav a:hover, footer > a:hover { color: white; }
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+.filter-bar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(180px, .45fr) auto;
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 22px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .025);
+}
+.filter-bar label { display: grid; gap: 7px; }
+.filter-bar label > span {
+  color: var(--muted);
+  font: .59rem 'Space Mono', monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.filter-bar input,
+.filter-bar select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: white;
+  background: #090e14;
+}
+.filter-bar input::placeholder { color: #667181; }
+.filter-count {
+  padding: 0 2px 13px;
+  color: var(--muted);
+  font: .62rem 'Space Mono', monospace;
+  white-space: nowrap;
 }
 .mission-card, .event-card, .error-state, .loading-card, .empty {
   border: 1px solid var(--line);
@@ -769,6 +804,8 @@ footer > a { justify-self: end; }
   .section-heading { grid-template-columns: 1fr; gap: 8px; }
   .section-index { margin: 0; }
   .mission-grid, .event-grid { grid-template-columns: 1fr; }
+  .filter-bar { grid-template-columns: 1fr; }
+  .filter-count { padding: 2px; }
   .orbital-metrics { grid-template-columns: repeat(2, 1fr); }
   .orbital-metrics > div:nth-child(2) { border-right: 0; }
   .orbital-metrics > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }

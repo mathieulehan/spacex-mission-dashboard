@@ -29,6 +29,11 @@ flowchart LR
 The client does not interpret raw LL2 or CelesTrak records. It renders stable,
 UI-oriented contracts returned by the server.
 
+Mission and event filtering is client-side because the dashboard already
+retrieves intentionally bounded result sets. Search matches normalized names,
+descriptions, locations, status, orbit, and vehicle fields without issuing
+additional rate-limited upstream requests.
+
 The data-status section reads `/api/cache`, which exposes only row timestamps,
 payload sizes, freshness, and aggregate detail counts. Cached payloads and the
 local database path are never sent to the browser.

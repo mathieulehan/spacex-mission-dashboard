@@ -15,6 +15,7 @@ perturbations data is orbital element data, not live spacecraft telemetry.
 ## Highlights
 
 - Upcoming mission manifest with countdowns and launch status.
+- Mission and event search with rocket and event-type filters.
 - In-app mission detail drawer with vehicle, recovery, timeline, media, and
   update information.
 - SpaceX event cards with visible webcast and detail actions.

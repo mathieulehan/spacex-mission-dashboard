@@ -92,6 +92,7 @@ describe('MissionApp', () => {
       sampled: true,
       count: 6,
     })
+
     renderApp()
 
     expect(
@@ -100,6 +101,23 @@ describe('MissionApp', () => {
     expect(
       screen.getByText(/Metrics below describe only this sample/),
     ).toBeInTheDocument()
+  })
+
+  it('filters missions and events with accessible controls', async () => {
+    const user = userEvent.setup()
+    renderApp()
+
+    const missionSearch = await screen.findByRole('searchbox', {
+      name: 'Search missions',
+    })
+    expect(screen.getByRole('heading', { name: 'Starlink Group 15-23' })).toBeInTheDocument()
+    await user.type(missionSearch, 'Roman')
+    expect(screen.queryByRole('heading', { name: 'Starlink Group 15-23' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: 'Roman Space Telescope' })).toHaveLength(2)
+
+    const eventSearch = screen.getByRole('searchbox', { name: 'Search events' })
+    await user.type(eventSearch, 'crew')
+    expect(screen.getByText('No events match these filters.')).toBeInTheDocument()
   })
 
   it('opens rich mission details inside the app', async () => {

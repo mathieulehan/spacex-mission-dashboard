@@ -1,4 +1,10 @@
-import type { Events, LaunchDetail, Launches, StarlinkSummary } from '../types'
+import type {
+  CacheStatus,
+  Events,
+  LaunchDetail,
+  Launches,
+  StarlinkSummary,
+} from '../types'
 
 export const launchesFixture: Launches = {
   total: 127,
@@ -202,4 +208,34 @@ export const starlinkFixture: StarlinkSummary = {
       altitudeKm: 532,
     },
   ],
+}
+
+export const cacheStatusFixture: CacheStatus = {
+  sources: [
+    {
+      key: 'll2:launches',
+      label: 'LL2 launches',
+      fetchedAt: '2026-08-28T20:22:31Z',
+      refreshAfter: '2026-08-28T20:32:31Z',
+      sizeBytes: 12_450,
+      fresh: false,
+    },
+    {
+      key: 'll2:events',
+      label: 'LL2 events',
+      fetchedAt: null,
+      refreshAfter: null,
+      sizeBytes: 0,
+      fresh: false,
+    },
+    {
+      key: 'celestrak:starlink',
+      label: 'CelesTrak Starlink',
+      fetchedAt: '2026-08-28T20:22:31Z',
+      refreshAfter: '2026-08-28T22:22:31Z',
+      sizeBytes: 805_000,
+      fresh: true,
+    },
+  ],
+  missionDetailsStored: 2,
 }

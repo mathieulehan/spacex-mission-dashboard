@@ -1,4 +1,10 @@
-import type { Events, LaunchDetail, Launches, StarlinkSummary } from './types'
+import type {
+  CacheStatus,
+  Events,
+  LaunchDetail,
+  Launches,
+  StarlinkSummary,
+} from './types'
 
 export class ApiError extends Error {
   constructor(
@@ -36,4 +42,5 @@ export const missionApi = {
     getJson<LaunchDetail>(`/api/launches/${encodeURIComponent(id)}`),
   events: () => getJson<Events>('/api/events'),
   starlink: () => getJson<StarlinkSummary>('/api/starlink'),
+  cacheStatus: () => getJson<CacheStatus>('/api/cache'),
 }

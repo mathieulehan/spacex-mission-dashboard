@@ -13,6 +13,12 @@ export type CachedValue<T> = {
   fetchedAt: number
 }
 
+export type CacheMetadata = {
+  key: string
+  fetchedAt: number
+  sizeBytes: number
+}
+
 export class DiskCache {
   constructor(private readonly databasePath: string | null) {
     this.withDatabase((database) => {
@@ -59,6 +65,30 @@ export class DiskCache {
       `)
         .run(key, JSON.stringify(value), fetchedAt)
     })
+  }
+
+  metadata(): CacheMetadata[] {
+    return (
+      this.withDatabase((database) =>
+        (
+          database
+            .prepare(`
+              SELECT cache_key, fetched_at, length(payload) AS size_bytes
+              FROM api_cache
+              ORDER BY cache_key
+            `)
+            .all() as Array<{
+            cache_key: string
+            fetched_at: number
+            size_bytes: number
+          }>
+        ).map((row) => ({
+          key: row.cache_key,
+          fetchedAt: row.fetched_at,
+          sizeBytes: row.size_bytes,
+        })),
+      ) ?? []
+    )
   }
 
   private withDatabase<T>(operation: (database: DatabaseSync) => T): T | null {

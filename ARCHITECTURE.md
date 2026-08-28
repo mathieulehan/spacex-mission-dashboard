@@ -29,6 +29,10 @@ flowchart LR
 The client does not interpret raw LL2 or CelesTrak records. It renders stable,
 UI-oriented contracts returned by the server.
 
+The data-status section reads `/api/cache`, which exposes only row timestamps,
+payload sizes, freshness, and aggregate detail counts. Cached payloads and the
+local database path are never sent to the browser.
+
 ### Server
 
 - `server/app.ts` wires Express routes and service orchestration.

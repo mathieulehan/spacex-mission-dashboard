@@ -296,6 +296,43 @@ describe('fresh mission data API', () => {
     }
   })
 
+  it('reports safe metadata for the shared cache database', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'cache-status-'))
+    const cachePath = path.join(directory, 'mission-data.sqlite')
+    try {
+      const cache = new DiskCache(cachePath)
+      cache.set('ll2:launches', { count: 127, results: [launch] })
+      cache.set('celestrak:starlink', orbitalRecords)
+      cache.set(
+        'll2:launch:521f3a1c-f977-4306-9b7f-495858719adf',
+        { privatePayload: 'not returned' },
+      )
+      const app = createApp({
+        fetchImpl: vi.fn<typeof fetch>(),
+        ll2CachePath: cachePath,
+      })
+
+      const response = await request(app).get('/api/cache').expect(200)
+
+      expect(response.body.missionDetailsStored).toBe(1)
+      expect(response.body.sources).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'll2:launches',
+            fresh: true,
+          }),
+          expect.objectContaining({
+            key: 'celestrak:starlink',
+            fresh: true,
+          }),
+        ]),
+      )
+      expect(JSON.stringify(response.body)).not.toContain('privatePayload')
+    } finally {
+      await rm(directory, { recursive: true })
+    }
+  })
+
   it('rejects malformed upstream payloads', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({ unexpected: true }), { status: 200 }),

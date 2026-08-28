@@ -470,6 +470,31 @@ dd { margin: 6px 0 0; font-size: .72rem; line-height: 1.45; }
 .satellite-list strong { font-size: .75rem; }
 .satellite-list span { color: var(--muted); font: .58rem 'Space Mono', monospace; }
 
+.cache-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.cache-card {
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.cache-card h3 { margin: 18px 0 24px; }
+.cache-card dl { display: grid; gap: 16px; }
+.cache-card dl > div {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.cache-card dd { color: #d5dde8; }
+.cache-summary {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: .75rem;
+}
+.cache-summary strong { color: white; }
+
 .loading-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
 .loading-card { min-height: 220px; padding: 25px; }
 .loading-card i {
@@ -728,6 +753,7 @@ footer > a { justify-self: end; }
   .mission-hero__shade { background: linear-gradient(0deg, var(--panel), transparent 70%); }
   .mission-grid { grid-template-columns: repeat(2, 1fr); }
   .orbit-layout { grid-template-columns: 1fr; }
+  .cache-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 650px) {

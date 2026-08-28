@@ -147,3 +147,15 @@ export type StarlinkSummary = {
     altitudeKm: number
   }>
 }
+
+export type CacheStatus = {
+  sources: Array<{
+    key: string
+    label: string
+    fetchedAt: string | null
+    refreshAfter: string | null
+    sizeBytes: number
+    fresh: boolean
+  }>
+  missionDetailsStored: number
+}

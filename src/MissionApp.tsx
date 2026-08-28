@@ -486,15 +486,68 @@ function StarlinkSection() {
   )
 }
 
+function CacheStatusSection() {
+  const cache = useQuery({
+    queryKey: ['cache-status'],
+    queryFn: missionApi.cacheStatus,
+    staleTime: 30_000,
+    ...queryDefaults,
+  })
+
+  return (
+    <section className="section" id="data-status">
+      <SectionHeading
+        index="04"
+        eyebrow="Local persistence"
+        title="Data cache status"
+        description="Safe operational metadata for the on-disk SQLite cache. Cached payload contents remain server-side."
+      />
+      {cache.isPending ? <Loading count={3} /> : cache.isError ? (
+        <ErrorState message={cache.error.message} retry={cache.refetch} />
+      ) : (
+        <>
+          <div className="cache-grid">
+            {cache.data.sources.map((source) => (
+              <article className="cache-card" key={source.key}>
+                <Badge tone={source.fresh ? 'go' : 'warning'}>
+                  {source.fetchedAt ? (source.fresh ? 'Fresh' : 'Refresh due') : 'Empty'}
+                </Badge>
+                <h3>{source.label}</h3>
+                <dl>
+                  <div>
+                    <dt>Stored</dt>
+                    <dd>{source.fetchedAt ? relativeTime(source.fetchedAt) : 'Awaiting first successful response'}</dd>
+                  </div>
+                  <div>
+                    <dt>Payload</dt>
+                    <dd>{source.sizeBytes ? `${formatNumber(source.sizeBytes)} bytes` : 'No row'}</dd>
+                  </div>
+                  <div>
+                    <dt>Refresh</dt>
+                    <dd>{source.refreshAfter ? relativeTime(source.refreshAfter) : 'On next request'}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
+          <p className="cache-summary">
+            Rich mission details stored: <strong>{cache.data.missionDetailsStored}</strong>
+          </p>
+        </>
+      )}
+    </section>
+  )
+}
+
 export default function MissionApp() {
   return (
     <div className="app">
       <header className="header">
         <a className="brand" href="#top"><strong>SPACEX</strong><span>MISSION DATA</span></a>
-        <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a></nav>
+        <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a><a href="#data-status">Data status</a></nav>
         <div className="source-state"><i /> LL2 + CELESTRAK</div>
       </header>
-      <main><LaunchesSection /><EventsSection /><StarlinkSection /></main>
+      <main><LaunchesSection /><EventsSection /><StarlinkSection /><CacheStatusSection /></main>
       <footer>
         <div className="brand"><strong>SPACEX</strong><span>COMMUNITY DATA</span></div>
         <p>Launch data by The Space Devs. Orbital elements by CelesTrak. Not affiliated with SpaceX.</p>

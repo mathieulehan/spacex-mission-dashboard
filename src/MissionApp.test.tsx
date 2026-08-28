@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { missionApi } from './api'
 import MissionApp from './MissionApp'
 import {
+  cacheStatusFixture,
   eventsFixture,
   launchDetailFixture,
   launchesFixture,
@@ -17,6 +18,7 @@ vi.mock('./api', () => ({
     launch: vi.fn(),
     events: vi.fn(),
     starlink: vi.fn(),
+    cacheStatus: vi.fn(),
   },
 }))
 
@@ -37,6 +39,7 @@ describe('MissionApp', () => {
     vi.mocked(missionApi.launch).mockResolvedValue(launchDetailFixture)
     vi.mocked(missionApi.events).mockResolvedValue(eventsFixture)
     vi.mocked(missionApi.starlink).mockResolvedValue(starlinkFixture)
+    vi.mocked(missionApi.cacheStatus).mockResolvedValue(cacheStatusFixture)
   })
 
   afterEach(cleanup)
@@ -57,6 +60,10 @@ describe('MissionApp', () => {
     expect(screen.getByRole('link', { name: /Details/ })).toBeVisible()
     expect(await screen.findByText('8,100')).toBeInTheDocument()
     expect(screen.getByText('STARLINK-1008')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Data cache status' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('CelesTrak Starlink')).toBeInTheDocument()
   })
 
   it('isolates a CelesTrak outage from launch data', async () => {

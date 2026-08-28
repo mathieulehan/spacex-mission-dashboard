@@ -22,6 +22,7 @@ perturbations data is orbital element data, not live spacecraft telemetry.
 - Runtime validation of upstream payloads with Zod.
 - Persistent disk caching and explicit stale/bootstrap states when upstream
   services are rate-limited.
+- Data-status dashboard for cache freshness, size, and stored mission details.
 - Responsive, accessible React interface with isolated section failures.
 
 ## Requirements
@@ -76,6 +77,7 @@ npm start
 | `GET /api/launches/:id` | Rich detail for a validated launch UUID |
 | `GET /api/events` | Upcoming SpaceX operational events |
 | `GET /api/starlink` | Starlink orbital metrics, plot data, and recent elements |
+| `GET /api/cache` | Safe cache freshness and size metadata; never payload contents |
 
 ## Cache and fallback behavior
 

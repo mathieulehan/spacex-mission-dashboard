@@ -93,6 +93,39 @@ export function createApp(options: AppOptions = {}) {
     response.json({ status: 'ok' })
   })
 
+  app.get('/api/cache', (_request, response) => {
+    const metadata = ll2Cache.metadata()
+    const byKey = new Map(metadata.map((entry) => [entry.key, entry]))
+    const sources = [
+      { key: 'll2:launches', label: 'LL2 launches', ttlMs: LL2_CACHE_TTL_MS },
+      { key: 'll2:events', label: 'LL2 events', ttlMs: LL2_CACHE_TTL_MS },
+      {
+        key: 'celestrak:starlink',
+        label: 'CelesTrak Starlink',
+        ttlMs: 2 * 60 * 60 * 1_000,
+      },
+    ].map(({ key, label, ttlMs }) => {
+      const entry = byKey.get(key)
+      return {
+        key,
+        label,
+        fetchedAt: entry ? new Date(entry.fetchedAt).toISOString() : null,
+        refreshAfter: entry
+          ? new Date(entry.fetchedAt + ttlMs).toISOString()
+          : null,
+        sizeBytes: entry?.sizeBytes ?? 0,
+        fresh: Boolean(entry && Date.now() - entry.fetchedAt < ttlMs),
+      }
+    })
+
+    response.json({
+      sources,
+      missionDetailsStored: metadata.filter((entry) =>
+        entry.key.startsWith('ll2:launch:'),
+      ).length,
+    })
+  })
+
   app.get(
     '/api/launches',
     route(async (_request, response) => {

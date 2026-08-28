@@ -184,6 +184,7 @@ export const launchDetailFixture: LaunchDetail = {
 
 export const starlinkFixture: StarlinkSummary = {
   fetchedAt: '2026-08-28T20:22:31Z',
+  calculatedAt: '2026-08-28T20:30:00Z',
   stale: false,
   sampled: false,
   count: 8_100,
@@ -195,6 +196,22 @@ export const starlinkFixture: StarlinkSummary = {
   plot: [
     { id: 44714, name: 'STARLINK-1008', raan: 79.083, inclination: 53.1472, anomaly: 273.4651 },
     { id: 44718, name: 'STARLINK-1012', raan: 179.3849, inclination: 53.1497, anomaly: 159.6021 },
+  ],
+  positions: [
+    {
+      id: 44714,
+      name: 'STARLINK-1008',
+      latitude: 42.5,
+      longitude: -64.2,
+      altitudeKm: 532,
+    },
+    {
+      id: 44718,
+      name: 'STARLINK-1012',
+      latitude: -18.4,
+      longitude: 121.6,
+      altitudeKm: 530,
+    },
   ],
   satellites: [
     {

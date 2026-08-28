@@ -61,6 +61,10 @@ describe('MissionApp', () => {
     expect(await screen.findByText('8,100')).toBeInTheDocument()
     expect(screen.getByText('STARLINK-1008')).toBeInTheDocument()
     expect(
+      screen.getByRole('img', { name: /Calculated positions for 2 sampled/ }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/not live telemetry/)).toBeInTheDocument()
+    expect(
       await screen.findByRole('heading', { name: 'Data cache status' }),
     ).toBeInTheDocument()
     expect(screen.getByText('CelesTrak Starlink')).toBeInTheDocument()

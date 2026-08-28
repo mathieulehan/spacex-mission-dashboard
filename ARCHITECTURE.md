@@ -83,7 +83,10 @@ SQLite keys are separated by resource:
 
 Orbital altitude is derived from mean motion using the Earth gravitational
 parameter and radius. The plot is a sampled RAAN-versus-inclination view, not a
-geographic live position map.
+live telemetry view. The ground-position map advances mean anomaly from each
+element epoch and rotates the resulting orbital-plane vector by Greenwich
+sidereal time. This lightweight two-body projection is intentionally labeled
+approximate; it is not an SGP4 ephemeris or a live spacecraft position.
 
 ## Data boundaries
 

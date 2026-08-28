@@ -275,6 +275,11 @@ describe('fresh mission data API', () => {
     expect(response.body.averageInclination).toBeCloseTo(53.14845)
     expect(response.body.averageAltitudeKm).toBeGreaterThan(300)
     expect(response.body.satellites[0].noradId).toBe(44714)
+    expect(response.body.positions).toHaveLength(2)
+    expect(response.body.positions[0].latitude).toBeGreaterThanOrEqual(-90)
+    expect(response.body.positions[0].latitude).toBeLessThanOrEqual(90)
+    expect(response.body.positions[0].longitude).toBeGreaterThanOrEqual(-180)
+    expect(response.body.positions[0].longitude).toBeLessThanOrEqual(180)
     expect(String(fetchMock.mock.calls[0][0])).toContain('celestrak.org')
   })
 

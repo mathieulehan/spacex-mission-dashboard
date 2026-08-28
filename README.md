@@ -20,6 +20,7 @@ perturbations data is orbital element data, not live spacecraft telemetry.
   update information.
 - SpaceX event cards with visible webcast and detail actions.
 - Starlink orbital summary and sampled RAAN/inclination visualization.
+- Approximate Starlink ground-position map propagated from orbital elements.
 - Runtime validation of upstream payloads with Zod.
 - Persistent disk caching and explicit stale/bootstrap states when upstream
   services are rate-limited.

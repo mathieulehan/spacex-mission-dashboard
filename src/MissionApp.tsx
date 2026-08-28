@@ -514,6 +514,32 @@ function OrbitPlot({ data }: { data: StarlinkSummary }) {
   )
 }
 
+function PositionMap({ data }: { data: StarlinkSummary }) {
+  return (
+    <div
+      className="position-map"
+      role="img"
+      aria-label={`Calculated positions for ${data.positions.length} sampled Starlink objects`}
+    >
+      <div className="position-map__graticule" />
+      <span className="position-map__label position-map__label--north">90° N</span>
+      <span className="position-map__label position-map__label--south">90° S</span>
+      <span className="position-map__label position-map__label--west">180° W</span>
+      <span className="position-map__label position-map__label--east">180° E</span>
+      {data.positions.map((position) => (
+        <i
+          key={position.id}
+          title={`${position.name}: ${position.latitude.toFixed(1)}°, ${position.longitude.toFixed(1)}° · ${position.altitudeKm.toFixed(0)} km`}
+          style={{
+            left: `${((position.longitude + 180) / 360) * 100}%`,
+            top: `${((90 - position.latitude) / 180) * 100}%`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 function StarlinkSection() {
   const starlink = useQuery({
     queryKey: ['starlink'],
@@ -552,6 +578,17 @@ function StarlinkSection() {
             <div><span>Mean altitude</span><strong>{formatNumber(starlink.data.averageAltitudeKm)} <small>km</small></strong></div>
             <div><span>Mean inclination</span><strong>{formatNumber(starlink.data.averageInclination, 1)}<small>°</small></strong></div>
             <div><span>Mean period</span><strong>{formatNumber(starlink.data.averagePeriodMinutes, 1)} <small>min</small></strong></div>
+          </div>
+          <div className="position-panel">
+            <div>
+              <p className="panel-label">Calculated ground positions · sampled objects</p>
+              <p>
+                Two-body estimates propagated from the stored element epoch at{' '}
+                {formatDate(starlink.data.calculatedAt)}. These are approximate
+                positions, not live telemetry.
+              </p>
+            </div>
+            <PositionMap data={starlink.data} />
           </div>
           <div className="orbit-layout">
             <div>

@@ -121,6 +121,7 @@ export type Events = {
 
 export type StarlinkSummary = {
   fetchedAt: string
+  calculatedAt: string
   stale: boolean
   sampled: boolean
   count: number
@@ -135,6 +136,13 @@ export type StarlinkSummary = {
     raan: number
     inclination: number
     anomaly: number
+  }>
+  positions: Array<{
+    id: number
+    name: string
+    latitude: number
+    longitude: number
+    altitudeKm: number
   }>
   satellites: Array<{
     name: string

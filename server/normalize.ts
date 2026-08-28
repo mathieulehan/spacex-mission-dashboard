@@ -147,6 +147,48 @@ function average(values: number[]) {
   return values.reduce((sum, value) => sum + value, 0) / values.length
 }
 
+function normalizeDegrees(value: number) {
+  return ((value + 180) % 360 + 360) % 360 - 180
+}
+
+function greenwichSiderealDegrees(at: Date) {
+  const julianDate = at.getTime() / 86_400_000 + 2_440_587.5
+  const daysSinceJ2000 = julianDate - 2_451_545
+  return normalizeDegrees(280.46061837 + 360.98564736629 * daysSinceJ2000)
+}
+
+export function estimateOrbitalPosition(record: CelestrakRecord, at: Date) {
+  const radians = Math.PI / 180
+  const epoch = Date.parse(record.EPOCH)
+  const elapsedDays = Number.isFinite(epoch)
+    ? (at.getTime() - epoch) / 86_400_000
+    : 0
+  const meanAnomaly =
+    (record.MEAN_ANOMALY + record.MEAN_MOTION * 360 * elapsedDays) * radians
+  const argumentOfLatitude =
+    record.ARG_OF_PERICENTER * radians + meanAnomaly
+  const inclination = record.INCLINATION * radians
+  const raan = record.RA_OF_ASC_NODE * radians
+  const x =
+    Math.cos(raan) * Math.cos(argumentOfLatitude) -
+    Math.sin(raan) * Math.sin(argumentOfLatitude) * Math.cos(inclination)
+  const y =
+    Math.sin(raan) * Math.cos(argumentOfLatitude) +
+    Math.cos(raan) * Math.sin(argumentOfLatitude) * Math.cos(inclination)
+  const z = Math.sin(argumentOfLatitude) * Math.sin(inclination)
+  const inertialLongitude = Math.atan2(y, x) / radians
+
+  return {
+    id: record.NORAD_CAT_ID,
+    name: record.OBJECT_NAME,
+    latitude: Math.asin(Math.max(-1, Math.min(1, z))) / radians,
+    longitude: normalizeDegrees(
+      inertialLongitude - greenwichSiderealDegrees(at),
+    ),
+    altitudeKm: altitudeFromMeanMotion(record.MEAN_MOTION),
+  }
+}
+
 export function summarizeStarlink(
   records: CelestrakRecord[],
   fetchedAt: string,
@@ -178,6 +220,13 @@ export function summarizeStarlink(
       anomaly: record.MEAN_ANOMALY,
     }))
 
+  const calculatedAt = new Date()
+  const positionStride = Math.max(1, Math.floor(records.length / 180))
+  const positions = records
+    .filter((_record, index) => index % positionStride === 0)
+    .slice(0, 180)
+    .map((record) => estimateOrbitalPosition(record, calculatedAt))
+
   const satellites = [...records]
     .sort((left, right) => Date.parse(right.EPOCH) - Date.parse(left.EPOCH))
     .slice(0, 12)
@@ -196,6 +245,7 @@ export function summarizeStarlink(
     fetchedAt,
     stale,
     sampled,
+    calculatedAt: calculatedAt.toISOString(),
     count: records.length,
     newestEpoch: epochs.length ? new Date(Math.max(...epochs)).toISOString() : null,
     averageInclination: average(inclinations),
@@ -205,6 +255,7 @@ export function summarizeStarlink(
       .map(([inclination, count]) => ({ inclination, count }))
       .sort((left, right) => left.inclination - right.inclination),
     plot,
+    positions,
     satellites,
   }
 }

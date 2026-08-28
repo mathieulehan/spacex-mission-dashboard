@@ -1,0 +1,111 @@
+export const LL2_BOOTSTRAP_LAUNCHES = {
+  total: 127,
+  stale: true,
+  sampled: true,
+  results: [
+    {
+      id: '521f3a1c-f977-4306-9b7f-495858719adf',
+      sourceUrl:
+        'https://ll.thespacedevs.com/2.2.0/launch/521f3a1c-f977-4306-9b7f-495858719adf/?format=json',
+      name: 'Falcon Heavy | Nancy Grace Roman Space Telescope',
+      status: {
+        name: 'Go for Launch',
+        abbrev: 'Go',
+        description: 'Current T-0 confirmed by official or reliable sources.',
+      },
+      lastUpdated: '2026-08-28T14:50:34Z',
+      net: '2026-08-30T11:26:00Z',
+      windowStart: '2026-08-30T11:26:00Z',
+      windowEnd: '2026-08-30T11:26:00Z',
+      precision: {
+        name: 'Minute',
+        abbrev: 'MIN',
+        description: 'The T-0 is accurate to the minute.',
+      },
+      probability: 60,
+      weatherConcerns: 'Cumulus Cloud Rule, Surface Electric Fields Rule',
+      holdReason: null,
+      failReason: null,
+      provider: 'SpaceX',
+      rocket: 'Falcon Heavy',
+      rocketFamily: 'Falcon',
+      missionName: 'Nancy Grace Roman Space Telescope',
+      missionDescription:
+        'NASA infrared space telescope designed to study dark energy, exoplanets, and the structure of the universe from Sun-Earth L2.',
+      missionType: 'Astrophysics',
+      orbit: 'Sun-Earth L2',
+      orbitAbbrev: 'L2',
+      pad: 'Launch Complex 39A',
+      location: 'Kennedy Space Center, FL, USA',
+      latitude: 28.60822681,
+      longitude: -80.60428186,
+      webcastLive: false,
+      imageUrl:
+        'https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_heavy_image_20220129192819.jpeg',
+    },
+    {
+      id: '63181269-b125-4c36-951c-c9bd9bbc4b55',
+      sourceUrl:
+        'https://ll.thespacedevs.com/2.2.0/launch/63181269-b125-4c36-951c-c9bd9bbc4b55/?format=json',
+      name: 'Falcon 9 Block 5 | Starlink Group 15-23',
+      status: {
+        name: 'Go for Launch',
+        abbrev: 'Go',
+        description: 'Current T-0 confirmed by official or reliable sources.',
+      },
+      lastUpdated: '2026-08-26T20:14:02Z',
+      net: '2026-09-02T07:46:00Z',
+      windowStart: '2026-09-02T07:46:00Z',
+      windowEnd: '2026-09-02T11:46:00Z',
+      precision: {
+        name: 'Minute',
+        abbrev: 'MIN',
+        description: 'The T-0 is accurate to the minute.',
+      },
+      probability: null,
+      weatherConcerns: null,
+      holdReason: null,
+      failReason: null,
+      provider: 'SpaceX',
+      rocket: 'Falcon 9 Block 5',
+      rocketFamily: 'Falcon',
+      missionName: 'Starlink Group 15-23',
+      missionDescription:
+        'A batch of 27 satellites for the Starlink space-based internet constellation.',
+      missionType: 'Communications',
+      orbit: 'Low Earth Orbit',
+      orbitAbbrev: 'LEO',
+      pad: 'Space Launch Complex 4E',
+      location: 'Vandenberg SFB, CA, USA',
+      latitude: 34.632,
+      longitude: -120.611,
+      webcastLive: false,
+      imageUrl:
+        'https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png',
+    },
+  ],
+}
+export const LL2_BOOTSTRAP_EVENTS = {
+  total: 1,
+  stale: true,
+  sampled: true,
+  results: [
+    {
+      id: 1512,
+      sourceUrl: 'https://ll.thespacedevs.com/2.2.0/event/1512/?format=json',
+      name: 'SpaceX Starship Booster B21 Static Fire',
+      type: 'Static Fire',
+      description:
+        'Booster 21 static fire in preparation for Starship Flight 14.',
+      date: '2026-08-28T18:10:00Z',
+      precision: 'Minute',
+      location: 'Starbase Texas',
+      webcastLive: false,
+      videoUrl: 'https://www.youtube.com/watch?v=-aO71pL3oZQ',
+      newsUrl: null,
+      imageUrl:
+        'https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/supeheavy_boost_image_20260828161901.jpeg',
+      lastUpdated: '2026-08-28T19:41:11Z',
+    },
+  ],
+}

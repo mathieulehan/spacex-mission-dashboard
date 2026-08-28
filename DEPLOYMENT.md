@@ -44,10 +44,15 @@ through a `VITE_` variable or browser code.
 The Blueprint runs:
 
 ```text
-Build: npm ci && npm run build
+Build: npm ci --include=dev && npm run build
 Start: npm start
 Health: /api/health
 ```
+
+The explicit `--include=dev` is required because Render applies
+`NODE_ENV=production` before the build. TypeScript and Vite are build-time
+development dependencies; the flag installs them without changing the
+production runtime environment.
 
 ## 4. Verify the deployment
 

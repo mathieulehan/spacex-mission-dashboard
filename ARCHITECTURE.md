@@ -150,6 +150,10 @@ assets on port `8787`. `render.yaml` defines the free Render web service and
 injects Turso credentials as non-committed secrets. Local cache files are
 runtime state and must not be included in artifacts or commits.
 
+Render installs development dependencies during its build even though
+`NODE_ENV=production` is already set, because TypeScript and Vite are required
+to create the production artifacts.
+
 ## Testing
 
 - `server/app.test.ts` covers route normalization, malformed upstream data,
@@ -157,6 +161,8 @@ runtime state and must not be included in artifacts or commits.
 - `src/MissionApp.test.tsx` covers primary rendering, independent failures,
   fallback labeling, action visibility, and the mission detail drawer.
 - `src/utils.test.ts` covers formatting and calculation helpers.
+- `server/render-config.test.ts` prevents production-mode dependency omission
+  from breaking Render builds.
 
 Changes should pass `npm test`, `npm run typecheck`, `npm run lint`, and
 `npm run build`.

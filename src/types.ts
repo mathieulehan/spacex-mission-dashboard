@@ -164,6 +164,8 @@ export type CacheStatus = {
     refreshAfter: string | null
     sizeBytes: number
     fresh: boolean
+    nextAttemptAt: string
+    nextAttemptReason: string
   }>
   missionDetailsStored: number
 }

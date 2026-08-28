@@ -21,6 +21,10 @@ export class StarlinkService {
     private readonly cache: DiskCache,
   ) {}
 
+  getRetryAt() {
+    return this.blockedUntil > Date.now() ? this.blockedUntil : null
+  }
+
   async getSummary() {
     const cached = this.cache.get(CACHE_KEY, celestrakRecordsSchema)
     const cachedAt = cached

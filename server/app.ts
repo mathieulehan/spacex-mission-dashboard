@@ -28,6 +28,7 @@ import { UpstreamClient, UpstreamError } from './upstream.js'
 
 const LL2_BASE_URL = 'https://ll.thespacedevs.com/2.2.0'
 const LL2_CACHE_TTL_MS = 10 * 60 * 1_000
+const LL2_RATE_LIMIT_FALLBACK_MS = 60 * 60 * 1_000
 
 type AppOptions = {
   fetchImpl?: typeof fetch
@@ -57,6 +58,7 @@ export function createApp(options: AppOptions = {}) {
       ? ll2Cache
       : new DiskCache(options.starlinkCachePath)
   const starlink = new StarlinkService(upstream, starlinkCache)
+  const ll2RetryAt = new Map<string, number>()
 
   async function getLl2<T>(
     cacheKey: string,
@@ -67,6 +69,17 @@ export function createApp(options: AppOptions = {}) {
     if (cached && Date.now() - cached.fetchedAt < LL2_CACHE_TTL_MS) {
       return { value: cached.value, stale: false }
     }
+    const retryAt = ll2RetryAt.get(cacheKey)
+    if (retryAt && retryAt > Date.now()) {
+      if (cached) return { value: cached.value, stale: true }
+      throw new UpstreamError(
+        'The upstream service returned 429; waiting for its rate-limit window',
+        502,
+        'UPSTREAM_RATE_LIMITED',
+        429,
+        retryAt,
+      )
+    }
 
     try {
       const value = await upstream.get(
@@ -76,8 +89,15 @@ export function createApp(options: AppOptions = {}) {
         LL2_CACHE_TTL_MS / 1_000,
       )
       ll2Cache.set(cacheKey, value)
+      ll2RetryAt.delete(cacheKey)
       return { value, stale: false }
     } catch (error) {
+      if (error instanceof UpstreamError && error.upstreamStatus === 429) {
+        ll2RetryAt.set(
+          cacheKey,
+          error.retryAt ?? Date.now() + LL2_RATE_LIMIT_FALLBACK_MS,
+        )
+      }
       if (cached && error instanceof UpstreamError) {
         return { value: cached.value, stale: true }
       }
@@ -106,6 +126,15 @@ export function createApp(options: AppOptions = {}) {
       },
     ].map(({ key, label, ttlMs }) => {
       const entry = byKey.get(key)
+      const providerRetryAt =
+        key === 'celestrak:starlink'
+          ? starlink.getRetryAt()
+          : ll2RetryAt.get(key) ?? null
+      const refreshAt = entry ? entry.fetchedAt + ttlMs : Date.now()
+      const nextAttemptAt =
+        providerRetryAt && providerRetryAt > Date.now()
+          ? providerRetryAt
+          : refreshAt
       return {
         key,
         label,
@@ -115,6 +144,15 @@ export function createApp(options: AppOptions = {}) {
           : null,
         sizeBytes: entry?.sizeBytes ?? 0,
         fresh: Boolean(entry && Date.now() - entry.fetchedAt < ttlMs),
+        nextAttemptAt: new Date(nextAttemptAt).toISOString(),
+        nextAttemptReason:
+          providerRetryAt && providerRetryAt > Date.now()
+            ? key === 'celestrak:starlink'
+              ? 'CelesTrak cooldown'
+              : 'LL2 rate-limit window'
+            : entry
+              ? 'Cache freshness window'
+              : 'Next dashboard request',
       }
     })
 

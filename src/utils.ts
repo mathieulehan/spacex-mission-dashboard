@@ -47,3 +47,17 @@ export function relativeTime(value: string) {
   if (hours < 48) return `${hours}h ago`
   return `${Math.round(hours / 24)}d ago`
 }
+
+export function timeUntil(value: string, now = Date.now()) {
+  const difference = Date.parse(value) - now
+  if (!Number.isFinite(difference) || difference <= 0) return 'now'
+  const minutes = Math.ceil(difference / 60_000)
+  if (minutes < 60) return `in ${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  if (hours < 48) {
+    return `in ${hours}h${remainingMinutes ? ` ${remainingMinutes}m` : ''}`
+  }
+  const days = Math.floor(hours / 24)
+  return `in ${days}d ${hours % 24}h`
+}

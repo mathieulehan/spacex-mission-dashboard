@@ -609,6 +609,12 @@ dd { margin: 6px 0 0; font-size: .72rem; line-height: 1.45; }
   border-top: 1px solid var(--line);
 }
 .cache-card dd { color: #d5dde8; }
+.cache-card dd small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font: .56rem 'Space Mono', monospace;
+}
 .cache-summary {
   margin: 20px 0 0;
   color: var(--muted);

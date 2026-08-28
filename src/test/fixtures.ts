@@ -236,6 +236,8 @@ export const cacheStatusFixture: CacheStatus = {
       refreshAfter: '2026-08-28T20:32:31Z',
       sizeBytes: 12_450,
       fresh: false,
+      nextAttemptAt: '2030-08-28T21:22:31Z',
+      nextAttemptReason: 'LL2 rate-limit window',
     },
     {
       key: 'll2:events',
@@ -244,6 +246,8 @@ export const cacheStatusFixture: CacheStatus = {
       refreshAfter: null,
       sizeBytes: 0,
       fresh: false,
+      nextAttemptAt: '2030-08-28T20:30:00Z',
+      nextAttemptReason: 'Next dashboard request',
     },
     {
       key: 'celestrak:starlink',
@@ -252,6 +256,8 @@ export const cacheStatusFixture: CacheStatus = {
       refreshAfter: '2026-08-28T22:22:31Z',
       sizeBytes: 805_000,
       fresh: true,
+      nextAttemptAt: '2030-08-28T22:22:31Z',
+      nextAttemptReason: 'Cache freshness window',
     },
   ],
   missionDetailsStored: 2,

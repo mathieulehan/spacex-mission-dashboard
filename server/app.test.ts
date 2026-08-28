@@ -105,7 +105,10 @@ describe('fresh mission data API', () => {
 
   it('returns the bounded LL2 snapshot when the anonymous limit is active', async () => {
       const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-        new Response('Rate limit exceeded', { status: 429 }),
+        new Response('Rate limit exceeded', {
+          status: 429,
+          headers: { 'retry-after': '120' },
+        }),
       )
       const app = createApp({ fetchImpl: fetchMock, starlinkCachePath: null, ll2CachePath: null })
 
@@ -119,6 +122,12 @@ describe('fresh mission data API', () => {
       expect(response.body.results[0].id).toBe(
         '521f3a1c-f977-4306-9b7f-495858719adf',
       )
+      const cacheStatus = await request(app).get('/api/cache').expect(200)
+      const launchStatus = cacheStatus.body.sources.find(
+        (source: { key: string }) => source.key === 'll2:launches',
+      )
+      expect(launchStatus.nextAttemptReason).toBe('LL2 rate-limit window')
+      expect(Date.parse(launchStatus.nextAttemptAt)).toBeGreaterThan(Date.now())
   })
 
   it('persists LL2 data and serves it after a rate limit across restarts', async () => {
@@ -360,5 +369,11 @@ describe('fresh mission data API', () => {
     expect(first.body).toMatchObject({ stale: true, sampled: true, count: 6 })
     expect(second.body).toMatchObject({ stale: true, sampled: true, count: 6 })
     expect(fetchMock).toHaveBeenCalledTimes(1)
+    const cacheStatus = await request(app).get('/api/cache').expect(200)
+    const starlinkStatus = cacheStatus.body.sources.find(
+      (source: { key: string }) => source.key === 'celestrak:starlink',
+    )
+    expect(starlinkStatus.nextAttemptReason).toBe('CelesTrak cooldown')
+    expect(Date.parse(starlinkStatus.nextAttemptAt)).toBeGreaterThan(Date.now())
   })
 })

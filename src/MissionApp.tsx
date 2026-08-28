@@ -4,7 +4,7 @@ import { Badge, Countdown, ErrorState, ExternalLink, Loading, SectionHeading } f
 import { missionApi } from './api'
 import { launchCalendarHref } from './calendar'
 import type { Launch, LaunchDetail, SpaceEvent, StarlinkSummary } from './types'
-import { formatDate, formatNumber, relativeTime } from './utils'
+import { formatDate, formatNumber, relativeTime, timeUntil } from './utils'
 import './styles.css'
 
 const queryDefaults = { retry: 1, refetchOnWindowFocus: false }
@@ -628,6 +628,7 @@ function CacheStatusSection() {
     queryKey: ['cache-status'],
     queryFn: missionApi.cacheStatus,
     staleTime: 30_000,
+    refetchInterval: 30_000,
     ...queryDefaults,
   })
 
@@ -660,8 +661,11 @@ function CacheStatusSection() {
                     <dd>{source.sizeBytes ? `${formatNumber(source.sizeBytes)} bytes` : 'No row'}</dd>
                   </div>
                   <div>
-                    <dt>Refresh</dt>
-                    <dd>{source.refreshAfter ? relativeTime(source.refreshAfter) : 'On next request'}</dd>
+                    <dt>Next refresh attempt</dt>
+                    <dd>
+                      {timeUntil(source.nextAttemptAt)}
+                      <small>{source.nextAttemptReason}</small>
+                    </dd>
                   </div>
                 </dl>
               </article>

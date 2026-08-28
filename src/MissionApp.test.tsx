@@ -72,6 +72,7 @@ describe('MissionApp', () => {
       await screen.findByRole('heading', { name: 'Data cache status' }),
     ).toBeInTheDocument()
     expect(screen.getByText('CelesTrak Starlink')).toBeInTheDocument()
+    expect(screen.getByText('LL2 rate-limit window')).toBeInTheDocument()
   })
 
   it('isolates a CelesTrak outage from launch data', async () => {

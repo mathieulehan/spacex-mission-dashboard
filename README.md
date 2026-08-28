@@ -27,6 +27,7 @@ perturbations data is orbital element data, not live spacecraft telemetry.
 - Persistent disk caching and explicit stale/bootstrap states when upstream
   services are rate-limited.
 - Data-status dashboard for cache freshness, size, and stored mission details.
+- Provider-aware estimates for the next refresh attempt and its limiting reason.
 - Responsive, accessible React interface with isolated section failures.
 
 ## Requirements
@@ -94,6 +95,12 @@ npm start
 | `GET /api/events` | Upcoming SpaceX operational events |
 | `GET /api/starlink` | Starlink orbital metrics, plot data, and recent elements |
 | `GET /api/cache` | Safe cache freshness and size metadata; never payload contents |
+
+`/api/cache` also reports the estimated next attempt for each source. Healthy
+rows use their cache-expiry time, LL2 uses `Retry-After` or rate-reset headers
+when available (with a conservative one-hour fallback), and CelesTrak uses the
+service's enforced local cooldown. These are retry estimates, not guarantees
+that an upstream provider will accept or publish new data at that instant.
 
 ## Cache and fallback behavior
 

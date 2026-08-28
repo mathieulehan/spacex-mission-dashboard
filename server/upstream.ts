@@ -5,11 +5,29 @@ export class UpstreamError extends Error {
     message: string,
     readonly status: number,
     readonly code: string,
+    readonly upstreamStatus: number | null = null,
+    readonly retryAt: number | null = null,
   ) {
     super(message)
     this.name = 'UpstreamError'
   }
 }
+
+function retryTimestamp(response: Response) {
+  const retryAfter = response.headers.get('retry-after')
+  if (retryAfter) {
+    const seconds = Number(retryAfter)
+    if (Number.isFinite(seconds)) return Date.now() + seconds * 1_000
+    const timestamp = Date.parse(retryAfter)
+    if (Number.isFinite(timestamp)) return timestamp
+  }
+
+  const rateLimitReset = Number(response.headers.get('x-ratelimit-reset'))
+  return Number.isFinite(rateLimitReset) && rateLimitReset > 0
+    ? rateLimitReset * 1_000
+    : null
+}
+
 type CacheEntry = {
   expiresAt: number
   value: unknown
@@ -81,6 +99,8 @@ export class UpstreamClient {
         `The upstream service returned ${response.status}`,
         502,
         'UPSTREAM_RESPONSE_ERROR',
+        response.status,
+        retryTimestamp(response),
       )
     }
 

@@ -40,8 +40,10 @@ tentative event covering the published launch window; it does not require a
 calendar provider, account, or additional server route.
 
 The data-status section reads `/api/cache`, which exposes only row timestamps,
-payload sizes, freshness, and aggregate detail counts. Cached payloads and the
-local database path are never sent to the browser.
+payload sizes, freshness, aggregate detail counts, and safe next-attempt
+estimates. LL2 estimates prefer provider response headers and otherwise use a
+one-hour fallback; CelesTrak exposes its in-process cooldown deadline. Cached
+payloads and the local database path are never sent to the browser.
 
 ### Server
 

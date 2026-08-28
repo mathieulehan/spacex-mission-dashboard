@@ -44,6 +44,8 @@ payload sizes, freshness, aggregate detail counts, and safe next-attempt
 estimates. LL2 estimates prefer provider response headers and otherwise use a
 one-hour fallback; CelesTrak exposes its in-process cooldown deadline. Cached
 payloads and the local database path are never sent to the browser.
+The client refreshes this lightweight metadata every five seconds so a
+provider failure discovered by another section is reflected promptly.
 
 ### Server
 

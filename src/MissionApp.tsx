@@ -627,8 +627,8 @@ function CacheStatusSection() {
   const cache = useQuery({
     queryKey: ['cache-status'],
     queryFn: missionApi.cacheStatus,
-    staleTime: 30_000,
-    refetchInterval: 30_000,
+    staleTime: 5_000,
+    refetchInterval: 5_000,
     ...queryDefaults,
   })
 

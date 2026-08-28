@@ -5,6 +5,13 @@ serves both the React production assets and Express API. Turso holds the shared
 provider cache so Render spin-downs and redeploys do not erase successful LL2
 or CelesTrak responses.
 
+Current deployment:
+
+- Application: <https://spacex-mission-data.onrender.com/>
+- Health: <https://spacex-mission-data.onrender.com/api/health>
+- Cache status: <https://spacex-mission-data.onrender.com/api/cache>
+- Source: <https://github.com/mathieulehan/spacex-mission-dashboard>
+
 ## 1. Publish the Git repository
 
 Create an empty GitHub repository, then connect and push this local `main`

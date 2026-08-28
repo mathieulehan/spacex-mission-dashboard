@@ -3,6 +3,7 @@
 A responsive dashboard for upcoming SpaceX missions, operational events, and
 Starlink orbital elements. It combines public data from:
 
+- **Live dashboard:** <https://spacex-mission-data.onrender.com/>
 - [Launch Library 2](https://thespacedevs.com/llapi) for launch schedules,
   mission status, pads, weather, vehicle stages, recovery plans, media, and
   events.
@@ -91,6 +92,7 @@ The repository includes a Render Blueprint and supports Turso as its production
 cache database. See [Deploying to Render and Turso](DEPLOYMENT.md) for the
 account, secret, deployment, and verification steps.
 
+- Production: <https://spacex-mission-data.onrender.com/>
 - With `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`, the server uses Turso.
 - Without those variables, it uses local `.cache/mission-data.sqlite`.
 

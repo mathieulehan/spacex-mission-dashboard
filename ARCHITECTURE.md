@@ -34,6 +34,11 @@ retrieves intentionally bounded result sets. Search matches normalized names,
 descriptions, locations, status, orbit, and vehicle fields without issuing
 additional rate-limited upstream requests.
 
+Calendar reminders are generated entirely in the browser from the normalized
+launch contract. `src/calendar.ts` escapes iCalendar fields and exports a
+tentative event covering the published launch window; it does not require a
+calendar provider, account, or additional server route.
+
 The data-status section reads `/api/cache`, which exposes only row timestamps,
 payload sizes, freshness, and aggregate detail counts. Cached payloads and the
 local database path are never sent to the browser.

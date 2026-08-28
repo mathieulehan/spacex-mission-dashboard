@@ -16,6 +16,7 @@ perturbations data is orbital element data, not live spacecraft telemetry.
 
 - Upcoming mission manifest with countdowns and launch status.
 - Mission and event search with rocket and event-type filters.
+- Downloadable iCalendar reminders for every listed launch.
 - In-app mission detail drawer with vehicle, recovery, timeline, media, and
   update information.
 - SpaceX event cards with visible webcast and detail actions.
@@ -61,6 +62,11 @@ Useful commands:
 | `npm run lint` | Run ESLint |
 | `npm run build` | Build client and server production output |
 | `npm start` | Serve the production build on port 8787 |
+
+Launch reminder links generate local `.ics` files containing the current launch
+window, location, status, mission description, and LL2 source URL. Calendar
+events are marked tentative because launch schedules can move; refresh the
+dashboard and export a new event after schedule changes.
 
 Production:
 

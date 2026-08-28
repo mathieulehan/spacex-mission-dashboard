@@ -58,6 +58,9 @@ describe('MissionApp', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Watch/ })).toBeVisible()
     expect(screen.getByRole('link', { name: /Details/ })).toBeVisible()
+    expect(
+      screen.getByRole('link', { name: 'Add Roman Space Telescope to calendar' }),
+    ).toHaveAttribute('download', 'roman-space-telescope.ics')
     expect(await screen.findByText('8,100')).toBeInTheDocument()
     expect(screen.getByText('STARLINK-1008')).toBeInTheDocument()
     expect(

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Countdown, ErrorState, ExternalLink, Loading, SectionHeading } from './components'
 import { missionApi } from './api'
+import { launchCalendarHref } from './calendar'
 import type { Launch, LaunchDetail, SpaceEvent, StarlinkSummary } from './types'
 import { formatDate, formatNumber, relativeTime } from './utils'
 import './styles.css'
@@ -28,6 +29,26 @@ function DetailButton({
     <button className="detail-button" type="button" onClick={() => onSelect(launch)}>
       {children} <span aria-hidden="true">→</span>
     </button>
+  )
+}
+
+function CalendarLink({ launch }: { launch: Launch }) {
+  const href = launchCalendarHref(launch)
+  if (!href) return null
+  const filename = `${(launch.missionName ?? launch.name)
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase() || 'launch'}.ics`
+
+  return (
+    <a
+      className="calendar-link"
+      href={href}
+      download={filename}
+      aria-label={`Add ${launch.missionName ?? launch.name} to calendar`}
+    >
+      Add to calendar <span aria-hidden="true">＋</span>
+    </a>
   )
 }
 
@@ -59,7 +80,10 @@ function MissionHero({
           <div><span>Weather</span><strong>{launch.probability === null ? 'Pending' : `${launch.probability}% favorable`}</strong></div>
         </div>
         <p className="hero-description">{launch.missionDescription ?? launch.status.description}</p>
-        <DetailButton launch={launch} onSelect={onSelect}>Mission details</DetailButton>
+        <div className="mission-actions">
+          <DetailButton launch={launch} onSelect={onSelect}>Mission details</DetailButton>
+          <CalendarLink launch={launch} />
+        </div>
       </div>
     </article>
   )
@@ -91,7 +115,10 @@ function MissionCard({
           <div><dt>Target</dt><dd>{formatDate(launch.net, launch.precision.name)}</dd></div>
           <div><dt>Site</dt><dd>{launch.pad ?? 'Pending'}</dd></div>
         </dl>
-        <DetailButton launch={launch} onSelect={onSelect}>View mission</DetailButton>
+        <div className="mission-actions">
+          <DetailButton launch={launch} onSelect={onSelect}>View mission</DetailButton>
+          <CalendarLink launch={launch} />
+        </div>
       </div>
     </article>
   )
@@ -306,6 +333,7 @@ function MissionDetailContent({ detail }: { detail: LaunchDetail }) {
       </div>
 
       <div className="detail-footer-links">
+        <CalendarLink launch={detail} />
         {detail.flightClubUrl && <ExternalLink href={detail.flightClubUrl}>Flight Club trajectory</ExternalLink>}
         {detail.padDetails?.mapUrl && <ExternalLink href={detail.padDetails.mapUrl}>Launch site map</ExternalLink>}
         <ExternalLink href={detail.sourceUrl}>Raw LL2 record</ExternalLink>

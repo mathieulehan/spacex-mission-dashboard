@@ -112,6 +112,12 @@ built-in launch and event snapshots keep the dashboard useful. The interface
 labels these snapshots and never presents their record counts as a complete
 live dataset.
 
+On a cold start with both providers already limiting this IP, LL2 becomes
+available after its anonymous request window resets, generally within the next
+hour. The server retries LL2 on a later dashboard request. CelesTrak retries no
+more than once every two hours; after a rejected download, keep the server
+running and allow the full local cooldown to elapse before refreshing.
+
 Both `.cache/` and build outputs are ignored by Git.
 
 ## Project documentation

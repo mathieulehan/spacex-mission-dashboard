@@ -92,8 +92,10 @@ live telemetry view. The 3D globe advances mean anomaly from each element epoch
 and rotates the resulting orbital-plane vector by Greenwich sidereal time.
 `src/EarthGlobe.tsx` maps those coordinates onto a lit Three.js sphere with a
 locally generated continent texture and draggable rotation. This lightweight
-two-body projection is intentionally labeled approximate; it is not an SGP4
-ephemeris or a live spacecraft position.
+orbital projection assumes an Earth-satellite system without atmospheric drag,
+Earth-shape perturbations, third-body gravity, or spacecraft maneuvers. It is
+intentionally labeled approximate; it is not an SGP4 ephemeris or a live
+spacecraft position.
 
 The globe renderer is lazy-loaded as a separate browser chunk because it is
 below the fold and Three.js is substantially larger than the primary

@@ -589,9 +589,11 @@ function StarlinkSection() {
             <div>
               <p className="panel-label">Calculated ground positions · sampled objects</p>
               <p>
-                Two-body estimates propagated from the stored element epoch at{' '}
-                {formatDate(starlink.data.calculatedAt)}. These are approximate
-                positions, not live telemetry.
+                Estimated at {formatDate(starlink.data.calculatedAt)} from the
+                latest published CelesTrak orbital elements. The calculation
+                assumes Earth&apos;s gravity without satellite maneuvers or
+                atmospheric effects, so positions are approximate—not live
+                telemetry.
               </p>
             </div>
             <Suspense fallback={<div className="earth-globe earth-globe--loading">Preparing 3D Earth…</div>}>

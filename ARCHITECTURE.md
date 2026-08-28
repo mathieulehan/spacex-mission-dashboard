@@ -11,7 +11,7 @@ flowchart LR
     UI[React dashboard] -->|/api/*| API[Express server]
     API --> LL2[Launch Library 2]
     API --> CT[CelesTrak GP]
-    API <--> DB[(Shared SQLite API cache)]
+    API <--> DB[(SQLite or Turso API cache)]
     API -. no cached response .-> BS[Bundled snapshots]
 ```
 
@@ -55,7 +55,9 @@ provider failure discovered by another section is reflected promptly.
 - `server/schemas.ts` defines Zod contracts for external payloads.
 - `server/normalize.ts` maps external records into frontend contracts and
   derives orbital metrics.
-- `server/disk-cache.ts` stores validated LL2 and CelesTrak payloads in SQLite.
+- `server/cache-store.ts` defines the common cache contract.
+- `server/disk-cache.ts` stores validated data in local SQLite.
+- `server/turso-cache.ts` stores the same records in remote libSQL/Turso.
 - `server/starlink.ts` enforces the CelesTrak two-hour refresh policy.
 - `server/ll2-bootstrap.ts` and `server/bootstrap.ts` contain bounded fallback
   snapshots used only when no successful disk record exists.
@@ -64,7 +66,7 @@ provider failure discovered by another section is reflected promptly.
 
 ### Launches, events, and mission details
 
-1. The route checks `.cache/mission-data.sqlite`.
+1. The route checks the configured cache store.
 2. A row younger than ten minutes is returned without an upstream request.
 3. An absent or expired row triggers an LL2 request.
 4. The response is validated with Zod before it is persisted.
@@ -78,6 +80,11 @@ SQLite keys are separated by resource:
 - `ll2:launches`
 - `ll2:events`
 - `ll2:launch:<uuid>`
+
+Production selects Turso when both `TURSO_DATABASE_URL` and
+`TURSO_AUTH_TOKEN` are present. Local development defaults to
+`.cache/mission-data.sqlite`. Both implementations use the same schema,
+validation, timestamps, keys, and stale-data behavior.
 
 ### Starlink elements
 
@@ -139,8 +146,9 @@ Development runs Vite and Express as separate processes. Production builds:
 - Server JavaScript into `dist-server/`.
 
 The production Express process serves both `/api` routes and the Vite static
-assets on port `8787`. Cache files are runtime state and must not be included in
-artifacts or commits.
+assets on port `8787`. `render.yaml` defines the free Render web service and
+injects Turso credentials as non-committed secrets. Local cache files are
+runtime state and must not be included in artifacts or commits.
 
 ## Testing
 

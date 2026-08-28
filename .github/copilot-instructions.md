@@ -14,6 +14,8 @@ Do not describe orbital elements as live spacecraft telemetry.
 - Vitest and Testing Library for tests.
 - Node.js 22.5+ is required because the LL2 disk cache uses `node:sqlite`.
 - Read `ARCHITECTURE.md` before changing data flow or cache behavior.
+- Production uses Turso through `@libsql/client`; local development uses
+  `node:sqlite` through the same `CacheStore` contract.
 
 ## Engineering conventions
 
@@ -35,6 +37,8 @@ Do not describe orbital elements as live spacecraft telemetry.
 - Do not weaken UUID validation on mission-detail routes.
 - Do not add API keys, credentials, `.env` files, cache databases, or generated
   build output to Git.
+- Keep Turso credentials server-only and configure them as Render secret
+  variables; never use a `VITE_` prefix for secrets.
 - Keep UI controls keyboard accessible and use semantic buttons or links.
 - Follow the existing concise TypeScript style and avoid unnecessary casts.
 

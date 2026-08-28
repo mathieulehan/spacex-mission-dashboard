@@ -2,7 +2,7 @@ import {
   STARLINK_BOOTSTRAP_FETCHED_AT,
   STARLINK_BOOTSTRAP_RECORDS,
 } from './bootstrap.js'
-import { DiskCache } from './disk-cache.js'
+import type { CacheStore } from './cache-store.js'
 import { summarizeStarlink } from './normalize.js'
 import { celestrakRecordsSchema } from './schemas.js'
 import { UpstreamClient, UpstreamError } from './upstream.js'
@@ -18,7 +18,7 @@ export class StarlinkService {
 
   constructor(
     private readonly upstream: UpstreamClient,
-    private readonly cache: DiskCache,
+    private readonly cache: CacheStore,
   ) {}
 
   getRetryAt() {
@@ -26,7 +26,7 @@ export class StarlinkService {
   }
 
   async getSummary() {
-    const cached = this.cache.get(CACHE_KEY, celestrakRecordsSchema)
+    const cached = await this.cache.get(CACHE_KEY, celestrakRecordsSchema)
     const cachedAt = cached
       ? new Date(cached.fetchedAt).toISOString()
       : STARLINK_BOOTSTRAP_FETCHED_AT
@@ -56,7 +56,7 @@ export class StarlinkService {
         REFRESH_INTERVAL_MS / 1_000,
       )
       const fetchedAt = new Date().toISOString()
-      this.cache.set(CACHE_KEY, records, Date.parse(fetchedAt))
+      await this.cache.set(CACHE_KEY, records, Date.parse(fetchedAt))
       return summarizeStarlink(records, fetchedAt, false)
     } catch (error) {
       const exposedError =

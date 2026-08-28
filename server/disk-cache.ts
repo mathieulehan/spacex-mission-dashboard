@@ -2,24 +2,18 @@ import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import type { ZodType } from 'zod'
+import type {
+  CacheMetadata,
+  CachedValue,
+  CacheStore,
+} from './cache-store.js'
 
 type CacheRow = {
   payload: string
   fetched_at: number
 }
 
-export type CachedValue<T> = {
-  value: T
-  fetchedAt: number
-}
-
-export type CacheMetadata = {
-  key: string
-  fetchedAt: number
-  sizeBytes: number
-}
-
-export class DiskCache {
+export class DiskCache implements CacheStore {
   constructor(private readonly databasePath: string | null) {
     this.withDatabase((database) => {
       database.exec(`

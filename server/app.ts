@@ -8,6 +8,7 @@ import express, {
 } from 'express'
 import helmet from 'helmet'
 import { z, type ZodType } from 'zod'
+import type { CacheStore } from './cache-store.js'
 import { DiskCache } from './disk-cache.js'
 import {
   LL2_BOOTSTRAP_EVENTS,
@@ -24,6 +25,7 @@ import {
   ll2LaunchesSchema,
 } from './schemas.js'
 import { StarlinkService } from './starlink.js'
+import { TursoCache } from './turso-cache.js'
 import { UpstreamClient, UpstreamError } from './upstream.js'
 
 const LL2_BASE_URL = 'https://ll.thespacedevs.com/2.2.0'
@@ -48,11 +50,17 @@ function route(
 export function createApp(options: AppOptions = {}) {
   const app = express()
   const upstream = new UpstreamClient(options.fetchImpl, 30_000)
-  const ll2Cache = new DiskCache(
-    options.ll2CachePath === undefined
-      ? path.resolve('.cache/mission-data.sqlite')
-      : options.ll2CachePath,
-  )
+  const tursoUrl = process.env.TURSO_DATABASE_URL
+  const tursoToken = process.env.TURSO_AUTH_TOKEN
+  if (tursoUrl && !tursoToken) {
+    throw new Error('TURSO_AUTH_TOKEN is required with TURSO_DATABASE_URL')
+  }
+  const ll2Cache: CacheStore =
+    options.ll2CachePath !== undefined
+      ? new DiskCache(options.ll2CachePath)
+      : tursoUrl
+        ? new TursoCache(tursoUrl, tursoToken)
+        : new DiskCache(path.resolve('.cache/mission-data.sqlite'))
   const starlinkCache =
     options.starlinkCachePath === undefined
       ? ll2Cache
@@ -65,7 +73,7 @@ export function createApp(options: AppOptions = {}) {
     url: string,
     schema: ZodType<T>,
   ): Promise<{ value: T; stale: boolean }> {
-    const cached = ll2Cache.get(cacheKey, schema)
+    const cached = await ll2Cache.get(cacheKey, schema)
     if (cached && Date.now() - cached.fetchedAt < LL2_CACHE_TTL_MS) {
       return { value: cached.value, stale: false }
     }
@@ -88,7 +96,7 @@ export function createApp(options: AppOptions = {}) {
         { headers: { accept: 'application/json' } },
         LL2_CACHE_TTL_MS / 1_000,
       )
-      ll2Cache.set(cacheKey, value)
+      await ll2Cache.set(cacheKey, value)
       ll2RetryAt.delete(cacheKey)
       return { value, stale: false }
     } catch (error) {
@@ -113,8 +121,8 @@ export function createApp(options: AppOptions = {}) {
     response.json({ status: 'ok' })
   })
 
-  app.get('/api/cache', (_request, response) => {
-    const metadata = ll2Cache.metadata()
+  app.get('/api/cache', route(async (_request, response) => {
+    const metadata = await ll2Cache.metadata()
     const byKey = new Map(metadata.map((entry) => [entry.key, entry]))
     const sources = [
       { key: 'll2:launches', label: 'LL2 launches', ttlMs: LL2_CACHE_TTL_MS },
@@ -162,7 +170,7 @@ export function createApp(options: AppOptions = {}) {
         entry.key.startsWith('ll2:launch:'),
       ).length,
     })
-  })
+  }))
 
   app.get(
     '/api/launches',

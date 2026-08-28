@@ -85,6 +85,15 @@ $env:NODE_ENV = 'production'
 npm start
 ```
 
+## Free deployment
+
+The repository includes a Render Blueprint and supports Turso as its production
+cache database. See [Deploying to Render and Turso](DEPLOYMENT.md) for the
+account, secret, deployment, and verification steps.
+
+- With `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`, the server uses Turso.
+- Without those variables, it uses local `.cache/mission-data.sqlite`.
+
 ## API routes
 
 | Route | Description |
@@ -132,6 +141,7 @@ Both `.cache/` and build outputs are ignored by Git.
 ## Project documentation
 
 - [Architecture](ARCHITECTURE.md)
+- [Render and Turso deployment](DEPLOYMENT.md)
 - [Copilot repository instructions](.github/copilot-instructions.md)
 
 ## Data and security

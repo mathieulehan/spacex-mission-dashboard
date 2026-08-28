@@ -1,24 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { positionToCartesian } from './earth-geometry'
+import { WORLD_POLYGONS } from './earth-geography'
 import type { StarlinkSummary } from './types'
-
-type Coordinate = [longitude: number, latitude: number]
-
-const CONTINENTS: Coordinate[][] = [
-  [[-168, 66], [-145, 70], [-125, 55], [-105, 50], [-82, 25], [-97, 16], [-117, 29], [-130, 48], [-168, 66]],
-  [[-82, 12], [-70, 8], [-50, -5], [-36, -22], [-54, -55], [-72, -40], [-80, -5], [-82, 12]],
-  [[-73, 82], [-18, 80], [-22, 60], [-48, 58], [-60, 70], [-73, 82]],
-  [[-18, 36], [4, 37], [34, 31], [52, 12], [42, -12], [20, -35], [5, -34], [-12, 5], [-18, 36]],
-  [[-10, 36], [8, 58], [35, 70], [70, 75], [120, 61], [146, 47], [140, 30], [105, 6], [76, 8], [57, 25], [35, 31], [16, 42], [-10, 36]],
-  [[112, -10], [154, -12], [151, -39], [130, -44], [114, -30], [112, -10]],
-  [[47, -13], [51, -17], [49, -26], [44, -24], [43, -16], [47, -13]],
-]
 
 function createEarthTexture() {
   const canvas = document.createElement('canvas')
-  canvas.width = 1_024
-  canvas.height = 512
+  canvas.width = 2_048
+  canvas.height = 1_024
   const context = canvas.getContext('2d')
   if (!context) return null
 
@@ -29,19 +18,30 @@ function createEarthTexture() {
   context.fillStyle = ocean
   context.fillRect(0, 0, canvas.width, canvas.height)
 
-  for (const continent of CONTINENTS) {
+  for (const polygon of WORLD_POLYGONS) {
     context.beginPath()
-    continent.forEach(([longitude, latitude], index) => {
-      const x = ((longitude + 180) / 360) * canvas.width
-      const y = ((90 - latitude) / 180) * canvas.height
-      if (index === 0) context.moveTo(x, y)
-      else context.lineTo(x, y)
-    })
-    context.closePath()
-    context.fillStyle = '#2a6a5a'
-    context.fill()
-    context.strokeStyle = '#61a887'
-    context.lineWidth = 2
+    for (const ring of polygon) {
+      let previousLongitude: number | null = null
+      ring.forEach(([longitude, latitude], index) => {
+        const x = ((longitude + 180) / 360) * canvas.width
+        const y = ((90 - latitude) / 180) * canvas.height
+        if (
+          index === 0 ||
+          (previousLongitude !== null &&
+            Math.abs(longitude - previousLongitude) > 180)
+        ) {
+          context.moveTo(x, y)
+        } else {
+          context.lineTo(x, y)
+        }
+        previousLongitude = longitude
+      })
+      context.closePath()
+    }
+    context.fillStyle = '#286957'
+    context.fill('evenodd')
+    context.strokeStyle = 'rgba(111, 184, 148, .72)'
+    context.lineWidth = 0.7
     context.stroke()
   }
 

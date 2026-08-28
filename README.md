@@ -70,9 +70,11 @@ events are marked tentative because launch schedules can move; refresh the
 dashboard and export a new event after schedule changes.
 
 The Starlink globe is rendered locally with Three.js. Drag it to rotate the
-Earth and inspect the constellation distribution. Its continent texture is
-generated in the browser, so the visualization requires no external map tiles
-or imagery service.
+Earth and inspect the constellation distribution. Coastlines and country
+boundaries come from the bundled
+[Natural Earth](https://www.naturalearthdata.com/) 1:110m dataset through
+`world-atlas`; the texture is generated in the browser and requires no external
+map tiles or imagery service. Natural Earth data is public domain.
 
 Production:
 

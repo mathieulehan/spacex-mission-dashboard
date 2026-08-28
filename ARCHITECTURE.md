@@ -91,8 +91,10 @@ parameter and radius. The plot is a sampled RAAN-versus-inclination view, not a
 live telemetry view. The 3D globe advances mean anomaly from each element epoch
 and rotates the resulting orbital-plane vector by Greenwich sidereal time.
 `src/EarthGlobe.tsx` maps those coordinates onto a lit Three.js sphere with a
-locally generated continent texture and draggable rotation. This lightweight
-orbital projection assumes an Earth-satellite system without atmospheric drag,
+locally generated geographic texture and draggable rotation.
+`src/earth-geography.ts` converts bundled Natural Earth 1:110m TopoJSON into
+detailed coastline and country polygons at build time. This lightweight orbital
+projection assumes an Earth-satellite system without atmospheric drag,
 Earth-shape perturbations, third-body gravity, or spacecraft maneuvers. It is
 intentionally labeled approximate; it is not an SGP4 ephemeris or a live
 spacecraft position.

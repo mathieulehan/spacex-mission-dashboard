@@ -12,7 +12,7 @@ Do not describe orbital elements as live spacecraft telemetry.
   Earth geography in `src/`.
 - Express 5 and Zod in `server/`.
 - Vitest and Testing Library for tests.
-- Node.js 22.5+ is required because the LL2 disk cache uses `node:sqlite`.
+- Node.js 22.5+ is required because the local cache uses `node:sqlite`.
 - Read `ARCHITECTURE.md` before changing data flow or cache behavior.
 - Production uses Turso through `@libsql/client`; local development uses
   `node:sqlite` through the same `CacheStore` contract.
@@ -44,14 +44,18 @@ Do not describe orbital elements as live spacecraft telemetry.
 
 ## Cache rules
 
-- LL2 has a ten-minute freshness window and persists validated payloads in
-  `.cache/mission-data.sqlite`.
+- LL2 has a ten-minute freshness window and persists validated payloads through
+  the shared `CacheStore`.
 - Preserve stale-while-error behavior: refresh expired rows, update them only
   after successful validation, and serve the prior valid row on upstream
   failure.
 - CelesTrak downloads must remain at least two hours apart.
-- Persist CelesTrak records in the shared SQLite cache with atomic upserts and
-  retain cooldown backoff.
+- If the primary CelesTrak Starlink group download returns 403, try the
+  supplemental Starlink GP feed before entering cooldown backoff.
+- Persist the complete validated CelesTrak dataset as one atomic `CacheStore`
+  snapshot; do not split it into independently fresh satellite rows.
+- Keep Turso's transparent gzip encoding for cache payloads larger than 256 KiB
+  and preserve compatibility with existing uncompressed rows.
 - Bootstrap snapshots are a last resort when no disk data exists; never present
   their counts as a complete source dataset.
 

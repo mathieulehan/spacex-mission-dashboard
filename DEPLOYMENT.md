@@ -37,7 +37,9 @@ table on first startup.
 
 The free database is the persistent cache. Successful LL2 and CelesTrak
 responses are stored there with their fetch timestamps. Never expose the token
-through a `VITE_` variable or browser code.
+through a `VITE_` variable or browser code. Large payloads such as the full
+CelesTrak Starlink dataset are compressed before storage to remain within
+hosted request-size limits.
 
 ## 3. Create the Render service
 

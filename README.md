@@ -125,7 +125,9 @@ CelesTrak records use the same SQLite database under the
 `celestrak:starlink` key and remain fresh for two hours to respect the provider's
 download policy. During an outage or cooldown, the last successful dataset is
 served. If no cache exists, the app uses a clearly labeled six-record bootstrap
-sample.
+sample. If CelesTrak rejects the primary group download during its cooldown, the
+server tries CelesTrak's supplemental Starlink GP feed before using fallback
+data.
 
 When no LL2 database row exists and the anonymous limit is active, bounded
 built-in launch and event snapshots keep the dashboard useful. The interface

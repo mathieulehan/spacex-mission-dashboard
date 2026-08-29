@@ -292,6 +292,34 @@ describe('fresh mission data API', () => {
     expect(String(fetchMock.mock.calls[0][0])).toContain('celestrak.org')
   })
 
+  it('uses the CelesTrak supplemental feed when the group download is blocked', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response('Download cooldown active', { status: 403 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(orbitalRecords), { status: 200 }),
+      )
+    const app = createApp({
+      fetchImpl: fetchMock,
+      starlinkCachePath: null,
+      ll2CachePath: null,
+    })
+
+    const response = await request(app).get('/api/starlink').expect(200)
+
+    expect(response.body).toMatchObject({
+      count: 2,
+      stale: false,
+      sampled: false,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(String(fetchMock.mock.calls[1][0])).toContain(
+      '/supplemental/sup-gp.php',
+    )
+  })
+
   it('reuses a fresh persistent CelesTrak cache without downloading again', async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), 'starlink-cache-'))
     const cachePath = path.join(directory, 'mission-data.sqlite')
@@ -368,7 +396,7 @@ describe('fresh mission data API', () => {
 
     expect(first.body).toMatchObject({ stale: true, sampled: true, count: 6 })
     expect(second.body).toMatchObject({ stale: true, sampled: true, count: 6 })
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
     const cacheStatus = await request(app).get('/api/cache').expect(200)
     const starlinkStatus = cacheStatus.body.sources.find(
       (source: { key: string }) => source.key === 'celestrak:starlink',

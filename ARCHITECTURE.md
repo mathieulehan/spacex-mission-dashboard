@@ -91,11 +91,14 @@ validation, timestamps, keys, and stale-data behavior.
 1. The service reads the `celestrak:starlink` row from
    `.cache/mission-data.sqlite`.
 2. Data younger than two hours is summarized immediately.
-3. Expired or absent data triggers one CelesTrak group download.
-4. Successful records are validated, persisted with an atomic SQLite upsert,
+3. Expired or absent data triggers a CelesTrak GP group download.
+4. If that download is rejected with a cooldown response, the service tries
+   CelesTrak's supplemental Starlink GP feed.
+5. Successful records are validated, persisted with an atomic cache upsert,
    and summarized.
-5. A failed refresh returns stale disk data or the labeled bootstrap sample.
-6. An in-process backoff prevents repeated downloads during the cooldown.
+6. If both feeds fail, stale cached data or the labeled bootstrap sample is
+   returned.
+7. An in-process backoff prevents repeated downloads during the cooldown.
 
 Orbital altitude is derived from mean motion using the Earth gravitational
 parameter and radius. The plot is a sampled RAAN-versus-inclination view, not a

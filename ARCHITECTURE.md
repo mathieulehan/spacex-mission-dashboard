@@ -84,7 +84,9 @@ SQLite keys are separated by resource:
 Production selects Turso when both `TURSO_DATABASE_URL` and
 `TURSO_AUTH_TOKEN` are present. Local development defaults to
 `.cache/mission-data.sqlite`. Both implementations use the same schema,
-validation, timestamps, keys, and stale-data behavior.
+validation, timestamps, keys, and stale-data behavior. Turso cache payloads
+larger than 256 KiB are gzip-compressed before storage and transparently
+decoded on reads so provider datasets fit within hosted request limits.
 
 ### Starlink elements
 

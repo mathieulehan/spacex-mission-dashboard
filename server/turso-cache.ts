@@ -1,10 +1,27 @@
 import { createClient, type Client } from '@libsql/client'
+import { gzipSync, gunzipSync } from 'node:zlib'
 import type { ZodType } from 'zod'
 import type {
   CacheMetadata,
   CachedValue,
   CacheStore,
 } from './cache-store.js'
+
+const COMPRESSION_THRESHOLD_BYTES = 256 * 1_024
+const GZIP_PREFIX = 'gzip:'
+
+function encodePayload(value: unknown) {
+  const json = JSON.stringify(value)
+  return Buffer.byteLength(json) >= COMPRESSION_THRESHOLD_BYTES
+    ? `${GZIP_PREFIX}${gzipSync(json).toString('base64')}`
+    : json
+}
+
+function decodePayload(payload: string) {
+  return payload.startsWith(GZIP_PREFIX)
+    ? gunzipSync(Buffer.from(payload.slice(GZIP_PREFIX.length), 'base64')).toString()
+    : payload
+}
 
 export class TursoCache implements CacheStore {
   private readonly client: Client
@@ -34,7 +51,7 @@ export class TursoCache implements CacheStore {
     if (!row || typeof row.payload !== 'string') return null
 
     try {
-      const parsed = schema.safeParse(JSON.parse(row.payload))
+      const parsed = schema.safeParse(JSON.parse(decodePayload(row.payload)))
       if (parsed.success) {
         return { value: parsed.data, fetchedAt: Number(row.fetched_at) }
       }
@@ -59,7 +76,7 @@ export class TursoCache implements CacheStore {
           payload = excluded.payload,
           fetched_at = excluded.fetched_at
       `,
-      args: [key, JSON.stringify(value), fetchedAt],
+      args: [key, encodePayload(value), fetchedAt],
     })
   }
 

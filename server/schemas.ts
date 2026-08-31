@@ -193,15 +193,17 @@ export const gpRecordSchema = z.object({
   OBJECT_NAME: z.string(),
   OBJECT_ID: z.string(),
   EPOCH: z.string(),
-  MEAN_MOTION: z.number(),
-  ECCENTRICITY: z.number(),
-  INCLINATION: z.number(),
-  RA_OF_ASC_NODE: z.number(),
-  ARG_OF_PERICENTER: z.number(),
-  MEAN_ANOMALY: z.number(),
-  NORAD_CAT_ID: z.number(),
-  REV_AT_EPOCH: z.number(),
-  BSTAR: z.number(),
+  // Space-Track's GP API returns numeric fields as strings (unlike
+  // CelesTrak's plain JSON numbers), so these are coerced to numbers.
+  MEAN_MOTION: z.coerce.number(),
+  ECCENTRICITY: z.coerce.number(),
+  INCLINATION: z.coerce.number(),
+  RA_OF_ASC_NODE: z.coerce.number(),
+  ARG_OF_PERICENTER: z.coerce.number(),
+  MEAN_ANOMALY: z.coerce.number(),
+  NORAD_CAT_ID: z.coerce.number(),
+  REV_AT_EPOCH: z.coerce.number(),
+  BSTAR: z.coerce.number(),
 })
 
 export const gpRecordsSchema = z.array(gpRecordSchema).min(1)

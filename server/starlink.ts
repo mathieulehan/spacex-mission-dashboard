@@ -131,13 +131,6 @@ export class StarlinkService {
 
     const parsed = gpRecordsSchema.safeParse(payload)
     if (!parsed.success) {
-      console.error(
-        '[starlink] Space-Track schema mismatch. isArray=%s length=%s sample=%s issues=%j',
-        Array.isArray(payload),
-        Array.isArray(payload) ? payload.length : 'n/a',
-        JSON.stringify(payload).slice(0, 500),
-        parsed.error.issues.slice(0, 5),
-      )
       throw new UpstreamError(
         'The Space-Track response did not match the expected format',
         502,
@@ -183,7 +176,6 @@ export class StarlinkService {
         this.blockedUntil = Date.now() + REFRESH_INTERVAL_MS
         this.blockedError = error
       }
-      console.error('[starlink] Space-Track fetch failed:', error)
       if (cached) {
         return summarizeStarlink(cached.value, cachedAt, true)
       }

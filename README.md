@@ -7,10 +7,10 @@ Starlink orbital elements. It combines public data from:
 - [Launch Library 2](https://thespacedevs.com/llapi) for launch schedules,
   mission status, pads, weather, vehicle stages, recovery plans, media, and
   events.
-- [CelesTrak GP](https://celestrak.org/NORAD/documentation/gp-data-formats.php)
-  for current Starlink orbital elements.
+- [Space-Track GP](https://www.space-track.org/documentation#/gp) for current
+  Starlink orbital elements (requires a free Space-Track.org account).
 
-This project is not affiliated with or endorsed by SpaceX. CelesTrak general
+This project is not affiliated with or endorsed by SpaceX. Space-Track general
 perturbations data is orbital element data, not live spacecraft telemetry.
 
 ## Highlights
@@ -95,6 +95,10 @@ account, secret, deployment, and verification steps.
 - Production: <https://spacex-mission-data.onrender.com/>
 - With `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`, the server uses Turso.
 - Without those variables, it uses local `.cache/mission-data.sqlite`.
+- With `SPACETRACK_IDENTITY` and `SPACETRACK_PASSWORD` set (a free account at
+  <https://www.space-track.org/>), the server fetches live Starlink orbital
+  elements. Without them, `/api/starlink` always serves the labeled bootstrap
+  sample.
 
 ## API routes
 
@@ -109,7 +113,7 @@ account, secret, deployment, and verification steps.
 
 `/api/cache` also reports the estimated next attempt for each source. Healthy
 rows use their cache-expiry time, LL2 uses `Retry-After` or rate-reset headers
-when available (with a conservative one-hour fallback), and CelesTrak uses the
+when available (with a conservative one-hour fallback), and Space-Track uses the
 service's enforced local cooldown. These are retry estimates, not guarantees
 that an upstream provider will accept or publish new data at that instant.
 
@@ -121,13 +125,13 @@ launch, event, and detail payloads are stored in
 After expiry, the next request refreshes the row; if LL2 is rate-limited or
 unavailable, the last valid row is served with a stale marker instead.
 
-CelesTrak records use the same SQLite database under the
-`celestrak:starlink` key and remain fresh for two hours to respect the provider's
-download policy. During an outage or cooldown, the last successful dataset is
-served. If no cache exists, the app uses a clearly labeled six-record bootstrap
-sample. If CelesTrak rejects the primary group download during its cooldown, the
-server tries CelesTrak's supplemental Starlink GP feed before using fallback
-data.
+Space-Track records use the same SQLite database under the
+`spacetrack:starlink` key and remain fresh for two hours to respect the
+provider's download policy. Fetching requires `SPACETRACK_IDENTITY` and
+`SPACETRACK_PASSWORD` (a free account at <https://www.space-track.org/>);
+without them the app never attempts a live download. During an outage,
+cooldown, or missing credentials, the last successful dataset is served. If no
+cache exists, the app uses a clearly labeled six-record bootstrap sample.
 
 When no LL2 database row exists and the anonymous limit is active, bounded
 built-in launch and event snapshots keep the dashboard useful. The interface
@@ -136,8 +140,8 @@ live dataset.
 
 On a cold start with both providers already limiting this IP, LL2 becomes
 available after its anonymous request window resets, generally within the next
-hour. The server retries LL2 on a later dashboard request. CelesTrak retries no
-more than once every two hours; after a rejected download, keep the server
+hour. The server retries LL2 on a later dashboard request. Space-Track retries
+no more than once every two hours; after a rejected download, keep the server
 running and allow the full local cooldown to elapse before refreshing.
 
 Both `.cache/` and build outputs are ignored by Git.

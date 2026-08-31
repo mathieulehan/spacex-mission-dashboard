@@ -44,7 +44,7 @@ describe('MissionApp', () => {
 
   afterEach(cleanup)
 
-  it('renders LL2 missions and CelesTrak orbital data', async () => {
+  it('renders LL2 missions and Space-Track orbital data', async () => {
     renderApp()
 
     expect(
@@ -71,18 +71,18 @@ describe('MissionApp', () => {
     expect(
       await screen.findByRole('heading', { name: 'Data cache status' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('CelesTrak Starlink')).toBeInTheDocument()
+    expect(screen.getByText('Space-Track Starlink')).toBeInTheDocument()
     expect(screen.getByText('LL2 rate-limit window')).toBeInTheDocument()
   })
 
-  it('isolates a CelesTrak outage from launch data', async () => {
+  it('isolates a Space-Track outage from launch data', async () => {
     vi.mocked(missionApi.starlink).mockRejectedValue(
-      new Error('CelesTrak rate limit active'),
+      new Error('Space-Track rate limit active'),
     )
     renderApp()
 
     expect(
-      await screen.findByText('CelesTrak rate limit active', undefined, {
+      await screen.findByText('Space-Track rate limit active', undefined, {
         timeout: 3_000,
       }),
     ).toBeInTheDocument()

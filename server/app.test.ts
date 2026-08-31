@@ -86,6 +86,20 @@ const orbitalRecords = [
   },
 ]
 
+const spacetrackCredentials = { identity: 'test-user', password: 'test-pass' }
+
+function createSpaceTrackFetchMock(queryResponse: () => Response) {
+  return vi.fn<typeof fetch>().mockImplementation(async (url) => {
+    if (String(url).includes('ajaxauth/login')) {
+      return new Response('', {
+        status: 200,
+        headers: { 'set-cookie': 'chocolatechip=test-session; Path=/; HttpOnly' },
+      })
+    }
+    return queryResponse()
+  })
+}
+
 describe('fresh mission data API', () => {
   it('normalizes Launch Library 2 launches', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
@@ -272,11 +286,16 @@ describe('fresh mission data API', () => {
       expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('summarizes CelesTrak orbital elements', async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(JSON.stringify(orbitalRecords), { status: 200 }),
+  it('summarizes Space-Track orbital elements', async () => {
+    const fetchMock = createSpaceTrackFetchMock(
+      () => new Response(JSON.stringify(orbitalRecords), { status: 200 }),
     )
-    const app = createApp({ fetchImpl: fetchMock, starlinkCachePath: null, ll2CachePath: null })
+    const app = createApp({
+      fetchImpl: fetchMock,
+      starlinkCachePath: null,
+      ll2CachePath: null,
+      spacetrackCredentials,
+    })
 
     const response = await request(app).get('/api/starlink').expect(200)
 
@@ -289,44 +308,22 @@ describe('fresh mission data API', () => {
     expect(response.body.positions[0].latitude).toBeLessThanOrEqual(90)
     expect(response.body.positions[0].longitude).toBeGreaterThanOrEqual(-180)
     expect(response.body.positions[0].longitude).toBeLessThanOrEqual(180)
-    expect(String(fetchMock.mock.calls[0][0])).toContain('celestrak.org')
+    expect(String(fetchMock.mock.calls[0][0])).toContain('space-track.org')
+    expect(String(fetchMock.mock.calls[1][0])).toContain('space-track.org')
   })
 
-  it('uses the CelesTrak supplemental feed when the group download is blocked', async () => {
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        new Response('Download cooldown active', { status: 403 }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(orbitalRecords), { status: 200 }),
-      )
-    const app = createApp({
-      fetchImpl: fetchMock,
-      starlinkCachePath: null,
-      ll2CachePath: null,
-    })
-
-    const response = await request(app).get('/api/starlink').expect(200)
-
-    expect(response.body).toMatchObject({
-      count: 2,
-      stale: false,
-      sampled: false,
-    })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
-    expect(String(fetchMock.mock.calls[1][0])).toContain(
-      '/supplemental/sup-gp.php',
-    )
-  })
-
-  it('reuses a fresh persistent CelesTrak cache without downloading again', async () => {
+  it('reuses a fresh persistent Space-Track cache without downloading again', async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), 'starlink-cache-'))
     const cachePath = path.join(directory, 'mission-data.sqlite')
     try {
-      new DiskCache(cachePath).set('celestrak:starlink', orbitalRecords)
+      new DiskCache(cachePath).set('spacetrack:starlink', orbitalRecords)
       const fetchMock = vi.fn<typeof fetch>()
-      const app = createApp({ fetchImpl: fetchMock, starlinkCachePath: cachePath, ll2CachePath: null })
+      const app = createApp({
+        fetchImpl: fetchMock,
+        starlinkCachePath: cachePath,
+        ll2CachePath: null,
+        spacetrackCredentials,
+      })
 
       const response = await request(app).get('/api/starlink').expect(200)
 
@@ -344,7 +341,7 @@ describe('fresh mission data API', () => {
     try {
       const cache = new DiskCache(cachePath)
       cache.set('ll2:launches', { count: 127, results: [launch] })
-      cache.set('celestrak:starlink', orbitalRecords)
+      cache.set('spacetrack:starlink', orbitalRecords)
       cache.set(
         'll2:launch:521f3a1c-f977-4306-9b7f-495858719adf',
         { privatePayload: 'not returned' },
@@ -364,7 +361,7 @@ describe('fresh mission data API', () => {
             fresh: true,
           }),
           expect.objectContaining({
-            key: 'celestrak:starlink',
+            key: 'spacetrack:starlink',
             fresh: true,
           }),
         ]),
@@ -385,11 +382,16 @@ describe('fresh mission data API', () => {
     expect(response.body.error.code).toBe('UPSTREAM_INVALID_SHAPE')
   })
 
-  it('backs off after a CelesTrak cooldown response', async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response('Download cooldown active', { status: 403 }),
+  it('backs off after a Space-Track cooldown response', async () => {
+    const fetchMock = createSpaceTrackFetchMock(
+      () => new Response('Download cooldown active', { status: 403 }),
     )
-    const app = createApp({ fetchImpl: fetchMock, starlinkCachePath: null, ll2CachePath: null })
+    const app = createApp({
+      fetchImpl: fetchMock,
+      starlinkCachePath: null,
+      ll2CachePath: null,
+      spacetrackCredentials,
+    })
 
     const first = await request(app).get('/api/starlink').expect(200)
     const second = await request(app).get('/api/starlink').expect(200)
@@ -399,9 +401,9 @@ describe('fresh mission data API', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     const cacheStatus = await request(app).get('/api/cache').expect(200)
     const starlinkStatus = cacheStatus.body.sources.find(
-      (source: { key: string }) => source.key === 'celestrak:starlink',
+      (source: { key: string }) => source.key === 'spacetrack:starlink',
     )
-    expect(starlinkStatus.nextAttemptReason).toBe('CelesTrak cooldown')
+    expect(starlinkStatus.nextAttemptReason).toBe('Space-Track cooldown')
     expect(Date.parse(starlinkStatus.nextAttemptAt)).toBeGreaterThan(Date.now())
   })
 })

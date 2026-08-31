@@ -3,7 +3,7 @@
 This setup uses one free Render web service and one free Turso database. Render
 serves both the React production assets and Express API. Turso holds the shared
 provider cache so Render spin-downs and redeploys do not erase successful LL2
-or CelesTrak responses.
+or Space-Track responses.
 
 Current deployment:
 
@@ -35,11 +35,24 @@ database in the Turso dashboard. Copy:
 No schema migration command is needed. The application creates its `api_cache`
 table on first startup.
 
-The free database is the persistent cache. Successful LL2 and CelesTrak
+The free database is the persistent cache. Successful LL2 and Space-Track
 responses are stored there with their fetch timestamps. Never expose the token
 through a `VITE_` variable or browser code. Large payloads such as the full
 CelesTrak Starlink dataset are compressed before storage to remain within
 hosted request-size limits.
+
+## 2.5. Create a Space-Track account
+
+Starlink orbital elements come from Space-Track's GP API instead of CelesTrak,
+because CelesTrak blocks requests from cloud/datacenter IP ranges (which
+includes Render). Create a free account at
+<https://www.space-track.org/auth/createAccount>, then set:
+
+- `SPACETRACK_IDENTITY`: the account email/username.
+- `SPACETRACK_PASSWORD`: the account password.
+
+Without these variables, `/api/starlink` always serves the labeled bootstrap
+sample instead of live data.
 
 ## 3. Create the Render service
 
@@ -47,7 +60,8 @@ hosted request-size limits.
 2. Choose **New > Blueprint**.
 3. Connect the GitHub repository.
 4. Render detects `render.yaml`; approve the `spacex-mission-data` service.
-5. Enter `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` when prompted.
+5. Enter `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `SPACETRACK_IDENTITY`, and
+   `SPACETRACK_PASSWORD` when prompted.
 6. Create the Blueprint and wait for the health check to pass.
 
 The Blueprint runs:
@@ -75,7 +89,7 @@ Open the assigned `onrender.com` URL and check:
 The health endpoint should return `{"status":"ok"}`. The cache page initially
 shows empty rows and provider retry estimates. After successful provider
 requests, `/api/cache` should show stored payload sizes and timestamps for LL2
-and CelesTrak.
+and Space-Track.
 
 ## Free-tier behavior
 
@@ -92,4 +106,5 @@ and CelesTrak.
 
 Leave both Turso variables empty. The app automatically continues to use
 `.cache/mission-data.sqlite`, so local development and tests do not depend on a
-cloud account.
+cloud account. Space-Track credentials are optional locally too; without them
+the Starlink section falls back to the bundled bootstrap sample.

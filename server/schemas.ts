@@ -187,7 +187,9 @@ export const ll2EventsSchema = z.object({
   results: z.array(ll2EventSchema),
 })
 
-export const celestrakRecordSchema = z.object({
+// CCSDS OMM-standard general perturbations fields, shared by CelesTrak and
+// Space-Track's GP API classes.
+export const gpRecordSchema = z.object({
   OBJECT_NAME: z.string(),
   OBJECT_ID: z.string(),
   EPOCH: z.string(),
@@ -202,9 +204,9 @@ export const celestrakRecordSchema = z.object({
   BSTAR: z.number(),
 })
 
-export const celestrakRecordsSchema = z.array(celestrakRecordSchema).min(1)
+export const gpRecordsSchema = z.array(gpRecordSchema).min(1)
 
 export type Ll2Launch = z.infer<typeof ll2LaunchSchema>
 export type Ll2LaunchDetail = z.infer<typeof ll2LaunchDetailSchema>
 export type Ll2Event = z.infer<typeof ll2EventSchema>
-export type CelestrakRecord = z.infer<typeof celestrakRecordSchema>
+export type GpRecord = z.infer<typeof gpRecordSchema>

@@ -10,7 +10,7 @@ validation, normalization, caching, and fallback decisions.
 flowchart LR
     UI[React dashboard] -->|/api/*| API[Express server]
     API --> LL2[Launch Library 2]
-    API --> CT[CelesTrak GP]
+    API --> CT[Space-Track GP]
     API <--> DB[(SQLite or Turso API cache)]
     API -. no cached response .-> BS[Bundled snapshots]
 ```
@@ -26,7 +26,7 @@ flowchart LR
   isolation.
 - `src/styles.css` contains the responsive visual system.
 
-The client does not interpret raw LL2 or CelesTrak records. It renders stable,
+The client does not interpret raw LL2 or Space-Track records. It renders stable,
 UI-oriented contracts returned by the server.
 
 Mission and event filtering is client-side because the dashboard already
@@ -42,7 +42,7 @@ calendar provider, account, or additional server route.
 The data-status section reads `/api/cache`, which exposes only row timestamps,
 payload sizes, freshness, aggregate detail counts, and safe next-attempt
 estimates. LL2 estimates prefer provider response headers and otherwise use a
-one-hour fallback; CelesTrak exposes its in-process cooldown deadline. Cached
+one-hour fallback; Space-Track exposes its in-process cooldown deadline. Cached
 payloads and the local database path are never sent to the browser.
 The client refreshes this lightweight metadata every five seconds so a
 provider failure discovered by another section is reflected promptly.
@@ -58,7 +58,8 @@ provider failure discovered by another section is reflected promptly.
 - `server/cache-store.ts` defines the common cache contract.
 - `server/disk-cache.ts` stores validated data in local SQLite.
 - `server/turso-cache.ts` stores the same records in remote libSQL/Turso.
-- `server/starlink.ts` enforces the CelesTrak two-hour refresh policy.
+- `server/starlink.ts` authenticates with Space-Track and enforces its
+  two-hour refresh policy.
 - `server/ll2-bootstrap.ts` and `server/bootstrap.ts` contain bounded fallback
   snapshots used only when no successful disk record exists.
 
@@ -90,17 +91,17 @@ decoded on reads so provider datasets fit within hosted request limits.
 
 ### Starlink elements
 
-1. The service reads the `celestrak:starlink` row from
+1. The service reads the `spacetrack:starlink` row from
    `.cache/mission-data.sqlite`.
 2. Data younger than two hours is summarized immediately.
-3. Expired or absent data triggers a CelesTrak GP group download.
-4. If that download is rejected with a cooldown response, the service tries
-   CelesTrak's supplemental Starlink GP feed.
-5. Successful records are validated, persisted with an atomic cache upsert,
+3. Expired or absent data triggers a Space-Track login followed by one GP
+   class download for the Starlink group, provided
+   `SPACETRACK_IDENTITY`/`SPACETRACK_PASSWORD` are configured.
+4. Successful records are validated, persisted with an atomic cache upsert,
    and summarized.
-6. If both feeds fail, stale cached data or the labeled bootstrap sample is
-   returned.
-7. An in-process backoff prevents repeated downloads during the cooldown.
+5. A failed refresh (including missing credentials) returns stale disk data or
+   the labeled bootstrap sample.
+6. An in-process backoff prevents repeated downloads during the cooldown.
 
 Orbital altitude is derived from mean motion using the Earth gravitational
 parameter and radius. The plot is a sampled RAAN-versus-inclination view, not a
@@ -162,7 +163,7 @@ to create the production artifacts.
 ## Testing
 
 - `server/app.test.ts` covers route normalization, malformed upstream data,
-  persistent cache recovery, CelesTrak caching, and cooldown behavior.
+  persistent cache recovery, Space-Track caching, and cooldown behavior.
 - `src/MissionApp.test.tsx` covers primary rendering, independent failures,
   fallback labeling, action visibility, and the mission detail drawer.
 - `src/utils.test.ts` covers formatting and calculation helpers.

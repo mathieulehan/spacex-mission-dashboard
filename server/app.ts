@@ -24,7 +24,7 @@ import {
   ll2LaunchDetailSchema,
   ll2LaunchesSchema,
 } from './schemas.js'
-import { StarlinkService } from './starlink.js'
+import { StarlinkService, type SpaceTrackCredentials } from './starlink.js'
 import { TursoCache } from './turso-cache.js'
 import { UpstreamClient, UpstreamError } from './upstream.js'
 
@@ -37,6 +37,7 @@ type AppOptions = {
   serveStatic?: boolean
   starlinkCachePath?: string | null
   ll2CachePath?: string | null
+  spacetrackCredentials?: SpaceTrackCredentials | null
 }
 
 function route(
@@ -65,7 +66,20 @@ export function createApp(options: AppOptions = {}) {
     options.starlinkCachePath === undefined
       ? ll2Cache
       : new DiskCache(options.starlinkCachePath)
-  const starlink = new StarlinkService(upstream, starlinkCache)
+  const spacetrackCredentials =
+    options.spacetrackCredentials !== undefined
+      ? options.spacetrackCredentials
+      : process.env.SPACETRACK_IDENTITY && process.env.SPACETRACK_PASSWORD
+        ? {
+            identity: process.env.SPACETRACK_IDENTITY,
+            password: process.env.SPACETRACK_PASSWORD,
+          }
+        : null
+  const starlink = new StarlinkService(
+    options.fetchImpl ?? fetch,
+    starlinkCache,
+    spacetrackCredentials,
+  )
   const ll2RetryAt = new Map<string, number>()
 
   async function getLl2<T>(
@@ -128,14 +142,14 @@ export function createApp(options: AppOptions = {}) {
       { key: 'll2:launches', label: 'LL2 launches', ttlMs: LL2_CACHE_TTL_MS },
       { key: 'll2:events', label: 'LL2 events', ttlMs: LL2_CACHE_TTL_MS },
       {
-        key: 'celestrak:starlink',
-        label: 'CelesTrak Starlink',
+        key: 'spacetrack:starlink',
+        label: 'Space-Track Starlink',
         ttlMs: 2 * 60 * 60 * 1_000,
       },
     ].map(({ key, label, ttlMs }) => {
       const entry = byKey.get(key)
       const providerRetryAt =
-        key === 'celestrak:starlink'
+        key === 'spacetrack:starlink'
           ? starlink.getRetryAt()
           : ll2RetryAt.get(key) ?? null
       const refreshAt = entry ? entry.fetchedAt + ttlMs : Date.now()
@@ -155,8 +169,8 @@ export function createApp(options: AppOptions = {}) {
         nextAttemptAt: new Date(nextAttemptAt).toISOString(),
         nextAttemptReason:
           providerRetryAt && providerRetryAt > Date.now()
-            ? key === 'celestrak:starlink'
-              ? 'CelesTrak cooldown'
+            ? key === 'spacetrack:starlink'
+              ? 'Space-Track cooldown'
               : 'LL2 rate-limit window'
             : entry
               ? 'Cache freshness window'

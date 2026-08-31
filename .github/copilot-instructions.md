@@ -3,7 +3,7 @@
 ## Project intent
 
 Maintain a reliable, responsive SpaceX mission dashboard backed by Launch
-Library 2 and CelesTrak. This is community data, not official SpaceX telemetry.
+Library 2 and Space-Track. This is community data, not official SpaceX telemetry.
 Do not describe orbital elements as live spacecraft telemetry.
 
 ## Stack and layout
@@ -49,11 +49,11 @@ Do not describe orbital elements as live spacecraft telemetry.
 - Preserve stale-while-error behavior: refresh expired rows, update them only
   after successful validation, and serve the prior valid row on upstream
   failure.
-- CelesTrak downloads must remain at least two hours apart.
-- If the primary CelesTrak Starlink group download returns 403, try the
-  supplemental Starlink GP feed before entering cooldown backoff.
-- Persist the complete validated CelesTrak dataset as one atomic `CacheStore`
-  snapshot; do not split it into independently fresh satellite rows.
+- Space-Track downloads must remain at least two hours apart, and require a
+  free Space-Track.org account (`SPACETRACK_IDENTITY` / `SPACETRACK_PASSWORD`).
+- Persist the complete validated Space-Track dataset as one atomic
+  `CacheStore` snapshot; do not split it into independently fresh satellite
+  rows.
 - Keep Turso's transparent gzip encoding for cache payloads larger than 256 KiB
   and preserve compatibility with existing uncompressed rows.
 - Bootstrap snapshots are a last resort when no disk data exists; never present

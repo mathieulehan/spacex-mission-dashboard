@@ -1,9 +1,9 @@
-import type { CelestrakRecord } from './schemas.js'
+import type { GpRecord } from './schemas.js'
 
 export const STARLINK_BOOTSTRAP_FETCHED_AT = '2026-08-28T14:45:00.837792Z'
 
-// Limited snapshot captured from CelesTrak GP before the local cooldown began.
-export const STARLINK_BOOTSTRAP_RECORDS: CelestrakRecord[] = [
+// Limited snapshot captured from Space-Track's GP class before the local cooldown began.
+export const STARLINK_BOOTSTRAP_RECORDS: GpRecord[] = [
   {
     OBJECT_NAME: 'STARLINK-1008',
     OBJECT_ID: '2019-074B',

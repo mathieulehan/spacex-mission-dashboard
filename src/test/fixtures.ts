@@ -250,8 +250,8 @@ export const cacheStatusFixture: CacheStatus = {
       nextAttemptReason: 'Next dashboard request',
     },
     {
-      key: 'celestrak:starlink',
-      label: 'CelesTrak Starlink',
+      key: 'spacetrack:starlink',
+      label: 'Space-Track Starlink',
       fetchedAt: '2026-08-28T20:22:31Z',
       refreshAfter: '2026-08-28T22:22:31Z',
       sizeBytes: 805_000,

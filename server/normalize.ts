@@ -1,5 +1,5 @@
 import type {
-  CelestrakRecord,
+  GpRecord,
   Ll2Event,
   Ll2Launch,
   Ll2LaunchDetail,
@@ -157,7 +157,7 @@ function greenwichSiderealDegrees(at: Date) {
   return normalizeDegrees(280.46061837 + 360.98564736629 * daysSinceJ2000)
 }
 
-export function estimateOrbitalPosition(record: CelestrakRecord, at: Date) {
+export function estimateOrbitalPosition(record: GpRecord, at: Date) {
   const radians = Math.PI / 180
   const epoch = Date.parse(record.EPOCH)
   const elapsedDays = Number.isFinite(epoch)
@@ -190,7 +190,7 @@ export function estimateOrbitalPosition(record: CelestrakRecord, at: Date) {
 }
 
 export function summarizeStarlink(
-  records: CelestrakRecord[],
+  records: GpRecord[],
   fetchedAt: string,
   stale: boolean,
   sampled = false,

@@ -556,7 +556,7 @@ function StarlinkSection() {
   })
   return (
     <section className="section" id="starlink">
-      <SectionHeading index="03" eyebrow="CelesTrak GP" title="Starlink orbital elements" description="Current general perturbations data—not live spacecraft telemetry—summarized from CelesTrak." />
+      <SectionHeading index="03" eyebrow="Space-Track GP" title="Starlink orbital elements" description="Current general perturbations data—not live spacecraft telemetry—summarized from Space-Track." />
       {starlink.isPending ? <Loading count={3} /> : starlink.isError ? (
         <ErrorState message={starlink.error.message} retry={starlink.refetch} />
       ) : (
@@ -574,7 +574,7 @@ function StarlinkSection() {
           </div>
           {starlink.data.sampled && (
             <p className="sample-notice">
-              Showing a {starlink.data.count}-record CelesTrak snapshot while the
+              Showing a {starlink.data.count}-record Space-Track snapshot while the
               first full download is cooling down. Metrics below describe only
               this sample.
             </p>
@@ -590,7 +590,7 @@ function StarlinkSection() {
               <p className="panel-label">Calculated ground positions · sampled objects</p>
               <p>
                 Estimated at {formatDate(starlink.data.calculatedAt)} from the
-                latest published CelesTrak orbital elements. The calculation
+                latest published Space-Track orbital elements. The calculation
                 assumes Earth&apos;s gravity without satellite maneuvers or
                 atmospheric effects, so positions are approximate—not live
                 telemetry.
@@ -686,12 +686,12 @@ export default function MissionApp() {
       <header className="header">
         <a className="brand" href="#top"><strong>SPACEX</strong><span>MISSION DATA</span></a>
         <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a><a href="#data-status">Data status</a></nav>
-        <div className="source-state"><i /> LL2 + CELESTRAK</div>
+        <div className="source-state"><i /> LL2 + SPACE-TRACK</div>
       </header>
       <main><LaunchesSection /><EventsSection /><StarlinkSection /><CacheStatusSection /></main>
       <footer>
         <div className="brand"><strong>SPACEX</strong><span>COMMUNITY DATA</span></div>
-        <p>Launch data by The Space Devs. Orbital elements by CelesTrak. Not affiliated with SpaceX.</p>
+        <p>Launch data by The Space Devs. Orbital elements by Space-Track.org. Not affiliated with SpaceX.</p>
         <a href="#top">Back to top ↑</a>
       </footer>
     </div>

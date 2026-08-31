@@ -176,6 +176,7 @@ export class StarlinkService {
         this.blockedUntil = Date.now() + REFRESH_INTERVAL_MS
         this.blockedError = error
       }
+      console.error('[starlink] Space-Track fetch failed:', error)
       if (cached) {
         return summarizeStarlink(cached.value, cachedAt, true)
       }

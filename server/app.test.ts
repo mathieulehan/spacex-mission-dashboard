@@ -312,6 +312,36 @@ describe('fresh mission data API', () => {
     expect(String(fetchMock.mock.calls[1][0])).toContain('space-track.org')
   })
 
+  it('falls back to bootstrap data when Space-Track returns invalid JSON', async () => {
+    const fetchMock = createSpaceTrackFetchMock(() => new Response('not json', { status: 200 }))
+    const app = createApp({
+      fetchImpl: fetchMock,
+      starlinkCachePath: null,
+      ll2CachePath: null,
+      spacetrackCredentials,
+    })
+
+    const response = await request(app).get('/api/starlink').expect(200)
+
+    expect(response.body).toMatchObject({ stale: true, sampled: true, count: 6 })
+  })
+
+  it('falls back to bootstrap data when Space-Track returns an unexpected shape', async () => {
+    const fetchMock = createSpaceTrackFetchMock(
+      () => new Response(JSON.stringify({ unexpected: true }), { status: 200 }),
+    )
+    const app = createApp({
+      fetchImpl: fetchMock,
+      starlinkCachePath: null,
+      ll2CachePath: null,
+      spacetrackCredentials,
+    })
+
+    const response = await request(app).get('/api/starlink').expect(200)
+
+    expect(response.body).toMatchObject({ stale: true, sampled: true, count: 6 })
+  })
+
   it('reuses a fresh persistent Space-Track cache without downloading again', async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), 'starlink-cache-'))
     const cachePath = path.join(directory, 'mission-data.sqlite')
@@ -405,5 +435,59 @@ describe('fresh mission data API', () => {
     )
     expect(starlinkStatus.nextAttemptReason).toBe('Space-Track cooldown')
     expect(Date.parse(starlinkStatus.nextAttemptAt)).toBeGreaterThan(Date.now())
+  })
+
+  it('serves a stale cached dataset when a refresh attempt fails', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'starlink-stale-cache-'))
+    const cachePath = path.join(directory, 'mission-data.sqlite')
+    try {
+      const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1_000
+      new DiskCache(cachePath).set('spacetrack:starlink', orbitalRecords, threeHoursAgo)
+      const fetchMock = createSpaceTrackFetchMock(
+        () => new Response('Download cooldown active', { status: 403 }),
+      )
+      const app = createApp({
+        fetchImpl: fetchMock,
+        starlinkCachePath: cachePath,
+        ll2CachePath: null,
+        spacetrackCredentials,
+      })
+
+      const response = await request(app).get('/api/starlink').expect(200)
+
+      expect(response.body).toMatchObject({ stale: true, sampled: false, count: 2 })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    } finally {
+      await rm(directory, { recursive: true })
+    }
+  })
+
+  it('keeps serving the stale cache without retrying while a cooldown is active', async () => {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'starlink-stale-cooldown-'))
+    const cachePath = path.join(directory, 'mission-data.sqlite')
+    try {
+      const threeHoursAgo = Date.now() - 3 * 60 * 60 * 1_000
+      new DiskCache(cachePath).set('spacetrack:starlink', orbitalRecords, threeHoursAgo)
+      const fetchMock = createSpaceTrackFetchMock(
+        () => new Response('Download cooldown active', { status: 403 }),
+      )
+      const app = createApp({
+        fetchImpl: fetchMock,
+        starlinkCachePath: cachePath,
+        ll2CachePath: null,
+        spacetrackCredentials,
+      })
+
+      const first = await request(app).get('/api/starlink').expect(200)
+      const second = await request(app).get('/api/starlink').expect(200)
+
+      expect(first.body).toMatchObject({ stale: true, sampled: false, count: 2 })
+      expect(second.body).toMatchObject({ stale: true, sampled: false, count: 2 })
+      // The second request is blocked by the in-memory cooldown and must not
+      // trigger another Space-Track login/query round trip.
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+    } finally {
+      await rm(directory, { recursive: true })
+    }
   })
 })

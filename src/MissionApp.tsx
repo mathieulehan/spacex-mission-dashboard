@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Countdown, ErrorState, ExternalLink, Loading, SectionHeading } from './components'
 import { missionApi } from './api'
@@ -15,8 +15,8 @@ const EarthGlobe = lazy(async () => {
 
 function statusTone(status: string) {
   const value = status.toLowerCase()
-  if (value.includes('go') || value.includes('success')) return 'go' as const
   if (value.includes('hold') || value.includes('fail')) return 'warning' as const
+  if (value.includes('go') || value.includes('success')) return 'go' as const
   return 'neutral' as const
 }
 
@@ -138,32 +138,43 @@ function LaunchesSection() {
     staleTime: 600_000,
     ...queryDefaults,
   })
-  const searchValue = search.trim().toLowerCase()
-  const rockets = Array.from(
-    new Set(launches.data?.results.map((launch) => launch.rocket) ?? []),
-  ).sort()
-  const filteredLaunches =
-    launches.data?.results.filter((launch) => {
-      const searchable = [
-        launch.name,
-        launch.missionName,
-        launch.rocket,
-        launch.location,
-        launch.orbit,
-        launch.status.name,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return (
-        (!searchValue || searchable.includes(searchValue)) &&
-        (rocket === 'all' || launch.rocket === rocket)
-      )
-    }) ?? []
-  const manifestLaunches =
-    searchValue || rocket !== 'all'
-      ? filteredLaunches
-      : filteredLaunches.slice(1)
+  const searchValue = useMemo(
+    () => search.trim().toLowerCase(),
+    [search],
+  )
+  const rockets = useMemo(
+    () =>
+      Array.from(
+        new Set(launches.data?.results.map((launch) => launch.rocket) ?? []),
+      ).sort(),
+    [launches.data?.results],
+  )
+  const filteredLaunches = useMemo(
+    () =>
+      launches.data?.results.filter((launch) => {
+        const searchable = [
+          launch.name,
+          launch.missionName,
+          launch.rocket,
+          launch.location,
+          launch.orbit,
+          launch.status.name,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        return (
+          (!searchValue || searchable.includes(searchValue)) &&
+          (rocket === 'all' || launch.rocket === rocket)
+        )
+      }) ?? [],
+    [launches.data?.results, searchValue, rocket],
+  )
+  const manifestLaunches = useMemo(
+    () =>
+      searchValue || rocket !== 'all' ? filteredLaunches : filteredLaunches.slice(1),
+    [filteredLaunches, searchValue, rocket],
+  )
 
   return (
     <>
@@ -463,26 +474,36 @@ function EventsSection() {
     staleTime: 600_000,
     ...queryDefaults,
   })
-  const searchValue = search.trim().toLowerCase()
-  const eventTypes = Array.from(
-    new Set(events.data?.results.map((event) => event.type) ?? []),
-  ).sort()
-  const filteredEvents =
-    events.data?.results.filter((event) => {
-      const searchable = [
-        event.name,
-        event.description,
-        event.location,
-        event.type,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return (
-        (!searchValue || searchable.includes(searchValue)) &&
-        (eventType === 'all' || event.type === eventType)
-      )
-    }) ?? []
+  const searchValue = useMemo(
+    () => search.trim().toLowerCase(),
+    [search],
+  )
+  const eventTypes = useMemo(
+    () =>
+      Array.from(
+        new Set(events.data?.results.map((event) => event.type) ?? []),
+      ).sort(),
+    [events.data?.results],
+  )
+  const filteredEvents = useMemo(
+    () =>
+      events.data?.results.filter((event) => {
+        const searchable = [
+          event.name,
+          event.description,
+          event.location,
+          event.type,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        return (
+          (!searchValue || searchable.includes(searchValue)) &&
+          (eventType === 'all' || event.type === eventType)
+        )
+      }) ?? [],
+    [events.data?.results, searchValue, eventType],
+  )
   return (
     <section className="section" id="events">
       <SectionHeading index="02" eyebrow="Operations" title="Upcoming events" description="Static fires, mission milestones, and other SpaceX activity." />
@@ -552,7 +573,6 @@ function StarlinkSection() {
     queryFn: missionApi.starlink,
     staleTime: 7_200_000,
     ...queryDefaults,
-    retry: false,
   })
   return (
     <section className="section" id="starlink">

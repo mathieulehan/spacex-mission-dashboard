@@ -32,6 +32,7 @@ export function countdown(value: string, now = Date.now()) {
 }
 
 export function formatNumber(value: number, digits = 0) {
+  if (!Number.isFinite(value)) return 'N/A'
   return new Intl.NumberFormat('en-US', {
     maximumFractionDigits: digits,
     minimumFractionDigits: digits,

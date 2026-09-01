@@ -41,7 +41,7 @@ through a `VITE_` variable or browser code. Large payloads such as the full
 CelesTrak Starlink dataset are compressed before storage to remain within
 hosted request-size limits.
 
-## 2.5. Create a Space-Track account
+## 3. Create a Space-Track account
 
 Starlink orbital elements come from Space-Track's GP API instead of CelesTrak,
 because CelesTrak blocks requests from cloud/datacenter IP ranges (which
@@ -54,7 +54,7 @@ includes Render). Create a free account at
 Without these variables, `/api/starlink` always serves the labeled bootstrap
 sample instead of live data.
 
-## 3. Create the Render service
+## 4. Create the Render service
 
 1. Sign in at <https://dashboard.render.com/>.
 2. Choose **New > Blueprint**.

@@ -175,6 +175,16 @@ export class StarlinkService {
       if (error instanceof UpstreamError) {
         this.blockedUntil = Date.now() + REFRESH_INTERVAL_MS
         this.blockedError = error
+        // Structured log for rate-limit / upstream failures
+        console.log(JSON.stringify({
+          timestamp: new Date().toISOString(),
+          event: 'spacetrack_rate_limited',
+          reason: error.message,
+          code: error.code,
+          upstreamStatus: error.upstreamStatus ?? null,
+          nextAllowedAt: new Date(this.blockedUntil).toISOString(),
+          retryAt: error.retryAt ? new Date(error.retryAt).toISOString() : null,
+        }))
       }
       if (cached) {
         return summarizeStarlink(cached.value, cachedAt, true)

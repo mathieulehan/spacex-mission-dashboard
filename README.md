@@ -157,3 +157,4 @@ Both `.cache/` and build outputs are ignored by Git.
 No API keys are required. Do not add upstream credentials to browser code or
 commit `.env` files. External data is fetched by the Express server, validated,
 normalized, and then exposed through the local `/api` routes.
+# Test: automated PR flow

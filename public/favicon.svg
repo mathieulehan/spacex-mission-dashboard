@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Dark background circle -->
+  <circle cx="16" cy="16" r="15" fill="#05070b"/>
+  
+  <!-- Stars -->
+  <circle cx="8" cy="8" r="0.8" fill="#ffffff"/>
+  <circle cx="24" cy="6" r="0.6" fill="#ffffff"/>
+  <circle cx="26" cy="12" r="0.5" fill="#ffffff"/>
+  <circle cx="6" cy="20" r="0.5" fill="#ffffff"/>
+  
+  <!-- Rocket body (Falcon 9 style) -->
+  <path d="M16 5 L16 26" stroke="#ffffff" stroke-width="0.3" fill="none"/>
+  
+  <!-- Main fuselage -->
+  <path d="M13 8 L19 8 L18 20 L14 20 Z" fill="#ffffff"/>
+  
+  <!-- Nose cone -->
+  <path d="M13 8 L16 4 L19 8 Z" fill="#ffffff"/>
+  
+  <!-- Side boosters (simplified) -->
+  <path d="M11 12 L13 12 L12.5 18 L11.5 18 Z" fill="#ffffff" opacity="0.8"/>
+  <path d="M19 12 L21 12 L20.5 18 L19.5 18 Z" fill="#ffffff" opacity="0.8"/>
+  
+  <!-- Landing legs hint -->
+  <path d="M14 20 L12 22 M18 20 L20 22" stroke="#ffffff" stroke-width="0.5" fill="none"/>
+  
+  <!-- Engine exhaust glow -->
+  <ellipse cx="16" cy="23" rx="2" ry="1.5" fill="#ff6b35" opacity="0.9"/>
+  <ellipse cx="16" cy="24" rx="1" ry="1" fill="#ffaa00" opacity="0.7"/>
+</svg>

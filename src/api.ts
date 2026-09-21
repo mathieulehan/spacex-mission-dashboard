@@ -4,6 +4,7 @@ import type {
   LaunchDetail,
   Launches,
   StarlinkSummary,
+  Stats,
 } from './types'
 
 export class ApiError extends Error {
@@ -43,4 +44,5 @@ export const missionApi = {
   events: () => getJson<Events>('/api/events'),
   starlink: () => getJson<StarlinkSummary>('/api/starlink'),
   cacheStatus: () => getJson<CacheStatus>('/api/cache'),
+  stats: () => getJson<Stats>('/api/stats'),
 }

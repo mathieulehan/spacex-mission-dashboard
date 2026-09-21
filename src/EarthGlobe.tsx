@@ -222,6 +222,7 @@ export function EarthGlobe({ data }: { data: StarlinkSummary }) {
       ref={hostRef}
       role="img"
       aria-label={`Interactive 3D Earth with ${data.positions.length} calculated Starlink positions`}
+      title="Points verts = positions calculées des satellites Starlink. Ces positions sont des estimations basées sur les éléments orbitaux publiés — ce n'est pas un suivi en temps réel. Le modèle utilisé est un Keplerian simplifié (pas SGP4), l'erreur est de l'ordre de plusieurs km."
     >
       {renderError && (
         <p>3D rendering is unavailable in this browser. Orbital metrics remain available below.</p>

@@ -67,7 +67,7 @@ describe('MissionApp', () => {
       await screen.findByRole('img', { name: /Interactive 3D Earth with 2 calculated/ }),
     ).toBeInTheDocument()
     expect(screen.getByText('Drag to rotate')).toBeInTheDocument()
-    expect(screen.getByText(/without satellite maneuvers/)).toBeInTheDocument()
+    expect(screen.getByText(/approximate, not live/)).toBeInTheDocument()
     expect(
       await screen.findByRole('heading', { name: 'Data cache status' }),
     ).toBeInTheDocument()

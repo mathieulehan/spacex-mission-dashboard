@@ -156,6 +156,112 @@ export type StarlinkSummary = {
   }>
 }
 
+export type StatsLaunchPerYear = {
+  year: number
+  planned: number
+  completed: number
+  rate: number
+}
+
+export type StatsLaunchCadence = {
+  totalLaunches: number
+  successfulLaunches: number
+  failedLaunches: number
+  successRate: number
+  mostSuccessive: number
+  currentSuccessive: number
+  launchesPerYear: StatsLaunchPerYear[]
+  mostLaunchesInYear: { year: number; count: number }
+  launchGoal2026: { planned: number; completed: number; rate: number }
+}
+
+export type StatsBoosterFastestTurnaround = {
+  duration: string
+  booster?: string
+  firstFlight: string
+  secondFlight: string
+}
+
+export type StatsBooster = {
+  totalLanded: number
+  totalAttempts: number
+  landingRate: number
+  mostFlights: { booster: string; flights: number }
+  reflown: number
+  block5Landed: number
+  block5Attempts: number
+  block5Rate: number
+  block5Reflown: number
+  fastestTurnaround: StatsBoosterFastestTurnaround
+  fastestTurnaroundCapeCanaveral: StatsBoosterFastestTurnaround
+  fastestTurnaroundVandenberg: StatsBoosterFastestTurnaround
+  fastestTurnaroundStarbase: StatsBoosterFastestTurnaround
+}
+
+export type StatsLandingSite = {
+  landed: number
+  attempts: number
+  rate: number
+}
+
+export type StatsLandingSites = {
+  LZ1: StatsLandingSite
+  LZ2: StatsLandingSite
+  LZ4: StatsLandingSite
+  LZ40: StatsLandingSite
+  ASOG: StatsLandingSite
+  JRTI: StatsLandingSite
+  OCISLY: StatsLandingSite
+  Catch: StatsLandingSite
+}
+
+export type StatsStarlink = {
+  inOrbit: number
+  starlinkLaunches: number
+  totalLaunches: number
+  starlinkRate: number
+  heaviestLeoLift: { mass: string; mission: string }
+  heaviestGtoLift: { mass: string; mission: string }
+}
+
+export type StatsDragon = {
+  cargoMissions: number
+  crewMissions: number
+  testMissions: number
+  issCargoUp: string
+  issCargoDown: string
+  reflights: number
+  crewInOrbit: number
+  crewFlownTotal: number
+}
+
+export type StatsCapsule = {
+  landed: number
+  attempts: number
+  rate: number
+  reflown: number
+}
+
+export type StatsBusiness = {
+  revenue2025: string
+  valuation: string
+  employees: string
+  starlinkSubscribers: string
+  starlinkRevenue: string
+}
+
+export type Stats = {
+  fetchedAt: string
+  stale: boolean
+  launchCadence: StatsLaunchCadence
+  boosters: StatsBooster
+  starlink: StatsStarlink
+  landingSites: StatsLandingSites
+  dragons: StatsDragon
+  capsules: StatsCapsule
+  business: StatsBusiness
+}
+
 export type CacheStatus = {
   sources: Array<{
     key: string
@@ -168,4 +274,38 @@ export type CacheStatus = {
     nextAttemptReason: string
   }>
   missionDetailsStored: number
+}
+
+export type Stats = {
+  fetchedAt: string
+  stale: boolean
+  source: 'spacexnow' | 'api' | 'fallback'
+  starlinkSubscribers: number | null
+  launchesThisYear: number | null
+  launchesThisYearGoal: number | null
+  totalLaunches: number | null
+  totalLaunchesSuccessRate: number | null
+  boosterReflights: number | null
+  boosterLandingSuccessRate: number | null
+  maxBoosterFlights: number | null
+  starlinkSatsInOrbit: number | null
+  falcon9Launches: number | null
+  falcon9SuccessRate: number | null
+  falconHeavyLaunches: number | null
+  starshipLaunches: number | null
+  starshipSuccessRate: number | null
+  fastestTurnaroundMinutes: number | null
+  fastestBoosterTurnaroundDays: number | null
+  busiestLaunchSiteName: string | null
+  busiestLaunchSiteLaunches: number | null
+  capsuleReflights: number | null
+  capsuleLandingSuccessRate: number | null
+  crewFlownTotal: number | null
+  marketSharePercentage: number | null
+  revenueEstimateUsd: number | null
+  employeesEstimate: number | null
+  falconHeavyTotalLaunches: number | null
+  falconHeavySuccessRate: number | null
+  dragonCargoMassUpKg: number | null
+  dragonCargoMassDownKg: number | null
 }

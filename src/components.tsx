@@ -4,11 +4,13 @@ import { countdown } from './utils'
 export function Badge({
   tone = 'neutral',
   children,
+  className,
 }: {
   tone?: 'live' | 'go' | 'warning' | 'neutral'
   children: ReactNode
+  className?: string
 }) {
-  return <span className={`badge badge--${tone}`}>{children}</span>
+  return <span className={`badge badge--${tone}${className ? ` ${className}` : ''}`}>{children}</span>
 }
 export function ExternalLink({
   href,

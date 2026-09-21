@@ -27,6 +27,7 @@ import {
 import { StarlinkService, type SpaceTrackCredentials } from './starlink.js'
 import { TursoCache } from './turso-cache.js'
 import { UpstreamClient, UpstreamError } from './upstream.js'
+import { StatsService } from './stats-service.js'
 
 const LL2_BASE_URL = 'https://ll.thespacedevs.com/2.2.0'
 const LL2_CACHE_TTL_MS = 10 * 60 * 1_000
@@ -79,6 +80,10 @@ export function createApp(options: AppOptions = {}) {
     options.fetchImpl ?? fetch,
     starlinkCache,
     spacetrackCredentials,
+  )
+  const statsService = new StatsService(
+    ll2Cache,
+    options.fetchImpl ?? fetch,
   )
   const ll2RetryAt = new Map<string, number>()
 
@@ -270,6 +275,14 @@ export function createApp(options: AppOptions = {}) {
     '/api/starlink',
     route(async (_request, response) => {
       response.json(await starlink.getSummary())
+    }),
+  )
+
+  app.get(
+    '/api/stats',
+    route(async (_request, response) => {
+      const stats = await statsService.getStats()
+      response.json(stats)
     }),
   )
 

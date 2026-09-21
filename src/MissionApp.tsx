@@ -1,9 +1,10 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Countdown, ErrorState, ExternalLink, Loading, SectionHeading } from './components'
+import { StatsDashboard } from './StatsDashboard'
 import { missionApi } from './api'
 import { launchCalendarHref } from './calendar'
-import type { Launch, LaunchDetail, SpaceEvent, StarlinkSummary } from './types'
+import type { Launch, LaunchDetail, SpaceEvent, StarlinkSummary, Stats } from './types'
 import { formatDate, formatNumber, relativeTime, timeUntil } from './utils'
 import './styles.css'
 
@@ -546,23 +547,76 @@ function EventsSection() {
   )
 }
 
+function inclinationColor(inclination: number): string {
+  const clamped = Math.min(Math.max(inclination, 0), 180)
+  // 53° family (Starlink shells) → blue; 97.6° family (polar shells) → amber; else neutral
+  if (Math.abs(clamped - 53) <= 6) return 'var(--blue)'
+  if (Math.abs(clamped - 97.6) <= 6) return 'var(--amber)'
+  return '#8b96a6'
+}
+
+function orbitStatus(altitudeKm: number): { label: string; tone: 'go' | 'warning' | 'neutral' } {
+  if (altitudeKm < 400) return { label: 'RAISING ORBIT', tone: 'warning' }
+  if (altitudeKm >= 500 && altitudeKm <= 600) return { label: 'OPERATIONAL', tone: 'go' }
+  return { label: 'OTHER', tone: 'neutral' }
+}
+
 function OrbitPlot({ data }: { data: StarlinkSummary }) {
+  const yTicks = [0, 30, 60, 90]
+  const xTicks = [0, 90, 180, 270, 360]
   return (
     <div className="orbit-plot">
       <div className="orbit-plot__grid" />
+      {/* Y-axis ticks */}
+      {yTicks.map((v) => (
+        <div key={`y-${v}`} className="orbit-tick orbit-tick--y" style={{ bottom: `${v}%` }}>
+          <span className="orbit-tick__line" />
+          <span className="orbit-tick__label">{v}°</span>
+        </div>
+      ))}
+      {/* X-axis ticks */}
+      {xTicks.map((v) => (
+        <div key={`x-${v}`} className="orbit-tick orbit-tick--x" style={{ left: `${(v / 360) * 100}%` }}>
+          <span className="orbit-tick__line" />
+          <span className="orbit-tick__label">{v}°</span>
+        </div>
+      ))}
+      {/* Data points */}
       {data.plot.map((point) => (
         <i
           key={point.id}
-          title={`${point.name} · ${point.inclination.toFixed(1)}° inclination`}
+          className="orbit-dot"
+          title={`${point.name} — Satellite à ${Math.round(point.altitudeKm)} km d'altitude. Son orbite est inclinée de ${point.inclination.toFixed(1)}° par rapport à l'équateur (quasi polaire). RAAN = direction de l'orbite dans l'espace. Anomaly = où il se trouve sur son orbite à cet instant.`}
           style={{
             left: `${(point.raan / 360) * 100}%`,
             top: `${100 - (Math.min(point.inclination, 100) / 100) * 100}%`,
             opacity: 0.35 + (point.anomaly / 360) * 0.65,
+            background: inclinationColor(point.inclination),
           }}
         />
       ))}
-      <span className="axis-label axis-label--x">Right ascension of ascending node →</span>
-      <span className="axis-label axis-label--y">Inclination</span>
+      {/* Axis labels */}
+      <span className="axis-label axis-label--x" title="Right Ascension of Ascending Node (RAAN) : la direction dans l'espace où l'orbite croise l'équateur en allant vers le nord. Mesuré de 0 à 360°.">Right ascension of ascending node →</span>
+      <span className="axis-label axis-label--y" title="Angle entre le plan de l'orbite et l'équateur terrestre. 0° = orbite équatoriale, 90° = orbite polaire.">Inclination</span>
+      {/* Legend */}
+      <div className="orbit-legend">
+        <div className="orbit-legend__row">
+          <span className="orbit-legend__dot" style={{ background: 'var(--blue)' }} />
+          <span>53° shells (Starlink)</span>
+        </div>
+        <div className="orbit-legend__row">
+          <span className="orbit-legend__dot" style={{ background: 'var(--amber)' }} />
+          <span>97.6° shells (polar)</span>
+        </div>
+        <div className="orbit-legend__row">
+          <span className="orbit-legend__dot" style={{ background: '#8b96a6' }} />
+          <span>Other inclinations</span>
+        </div>
+        <div className="orbit-legend__row orbit-legend__row--muted">
+          <span className="orbit-legend__opacity" />
+          <span>Darker = more anomalous orbit</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -576,21 +630,28 @@ function StarlinkSection() {
   })
   return (
     <section className="section" id="starlink">
-      <SectionHeading index="03" eyebrow="Space-Track GP" title="Starlink orbital elements" description="Current general perturbations data—not live spacecraft telemetry—summarized from Space-Track." />
+      <SectionHeading index="03" eyebrow="Space-Track GP" title="Starlink orbital elements" description="Where Starlink satellites are right now, and how they're moving — computed from Space-Track's general perturbations data, not live telemetry." />
       {starlink.isPending ? <Loading count={3} /> : starlink.isError ? (
         <ErrorState message={starlink.error.message} retry={starlink.refetch} />
       ) : (
         <>
           <div className="starlink-status">
-            <Badge tone={starlink.data.stale ? 'warning' : 'go'}>
-              {starlink.data.sampled
-                ? 'Limited bootstrap sample'
-                : starlink.data.stale
-                  ? 'Cached dataset'
-                  : 'Current dataset'}
-            </Badge>
-            <span>Fetched {relativeTime(starlink.data.fetchedAt)}</span>
-            {starlink.data.newestEpoch && <span>Newest epoch {relativeTime(starlink.data.newestEpoch)}</span>}
+            <div className="starlink-timestamp">
+              <span className="starlink-timestamp__label">Last updated</span>
+              <time className="starlink-timestamp__value" dateTime={starlink.data.fetchedAt}>
+                {formatDate(starlink.data.fetchedAt, 'short')}
+              </time>
+            </div>
+            <div className="starlink-status__right">
+              <Badge tone={starlink.data.stale ? 'warning' : 'go'}>
+                {starlink.data.sampled
+                  ? 'Limited bootstrap sample'
+                  : starlink.data.stale
+                    ? 'Cached dataset'
+                    : 'Current dataset'}
+              </Badge>
+              <span>Fetched {relativeTime(starlink.data.fetchedAt)}</span>
+            </div>
           </div>
           {starlink.data.sampled && (
             <p className="sample-notice">
@@ -600,20 +661,18 @@ function StarlinkSection() {
             </p>
           )}
           <div className="orbital-metrics">
-            <div><span>Tracked objects</span><strong>{formatNumber(starlink.data.count)}</strong></div>
-            <div><span>Mean altitude</span><strong>{formatNumber(starlink.data.averageAltitudeKm)} <small>km</small></strong></div>
-            <div><span>Mean inclination</span><strong>{formatNumber(starlink.data.averageInclination, 1)}<small>°</small></strong></div>
-            <div><span>Mean period</span><strong>{formatNumber(starlink.data.averagePeriodMinutes, 1)} <small>min</small></strong></div>
+            <div><span title="Nombre d'objets spatiaux Starlink suivis dans la base de données.">Tracked objects</span><strong>{formatNumber(starlink.data.count)}</strong></div>
+            <div><span title="Altitude moyenne de la cohorte. Attention : mélange satellites en raising orbit (bas) et opérationnels (550 km).">Mean altitude</span><strong>{formatNumber(starlink.data.averageAltitudeKm)} <small>km</small></strong></div>
+            <div><span title="Inclinaison moyenne. Les Starlinks opèrent principalement à 53° (coquille principale) et 97,6° (polaire).">Mean inclination</span><strong>{formatNumber(starlink.data.averageInclination, 1)}<small>°</small></strong></div>
+            <div><span title="Durée moyenne d'un tour complet autour de la Terre. À 550 km, c'est environ 95 minutes.">Mean period</span><strong>{formatNumber(starlink.data.averagePeriodMinutes, 1)} <small>min</small></strong></div>
           </div>
           <div className="position-panel">
-            <div>
-              <p className="panel-label">Calculated ground positions · sampled objects</p>
+            <div title="Points verts = positions calculées des satellites Starlink. Ces positions sont des estimations basées sur les éléments orbitaux publiés — ce n'est pas un suivi en temps réel. Le modèle utilisé est un Keplerian simplifié (pas SGP4), l'erreur est de l'ordre de plusieurs km.">
+              <p className="panel-label">Where they are right now</p>
               <p>
-                Estimated at {formatDate(starlink.data.calculatedAt)} from the
-                latest published Space-Track orbital elements. The calculation
-                assumes Earth&apos;s gravity without satellite maneuvers or
-                atmospheric effects, so positions are approximate—not live
-                telemetry.
+                Estimated positions from the latest Space-Track orbital elements.
+                Calculated at {formatDate(starlink.data.calculatedAt)} — these are
+                approximate, not live locations.
               </p>
             </div>
             <Suspense fallback={<div className="earth-globe earth-globe--loading">Preparing 3D Earth…</div>}>
@@ -622,18 +681,55 @@ function StarlinkSection() {
           </div>
           <div className="orbit-layout">
             <div>
-              <p className="panel-label">Orbital plane distribution · sampled elements</p>
-              <OrbitPlot data={starlink.data} />
+              <p className="panel-label">Where the satellites are — each dot is one spacecraft</p>
+              <span className="orbit-plot-help" title="Chaque point représente un satellite Starlink. Son position sur le graphique indique son inclinaison orbitale (axe vertical, en degrés) et sa direction dans l'espace (RAAN, axe horizontal, en degrés). Plus le point est sombre, plus son anomalie orbitale est élevée — c'est-à-dire sa position sur son orbite à cet instant.">
+                <OrbitPlot data={starlink.data} />
+              </span>
             </div>
             <div>
               <p className="panel-label">Freshest element sets</p>
+              <p className="satellite-list-note">
+                Altitude tells the story: below 400 km the satellites are still climbing
+                to their operational slot; around 550 km they&apos;re in service.
+              </p>
               <div className="satellite-list">
-                {starlink.data.satellites.slice(0, 7).map((satellite) => (
-                  <article key={satellite.noradId}>
-                    <div><strong>{satellite.name}</strong><span>NORAD {satellite.noradId}</span></div>
-                    <div><strong>{formatNumber(satellite.altitudeKm)} km</strong><span>{formatNumber(satellite.inclination, 1)}° inc.</span></div>
-                  </article>
-                ))}
+                {starlink.data.satellites.slice(0, 7).map((satellite) => {
+                  const status = orbitStatus(satellite.altitudeKm)
+                  const altitudeTooltip = satellite.altitudeKm < 350
+                    ? `Altitude orbitale : ${Math.round(satellite.altitudeKm)} km. En route vers sa position opérationnelle (raising orbit) — ces satellites viennent d'être lancés et montent lentement vers leur orbite finale.`
+                    : `Altitude orbitale : ${Math.round(satellite.altitudeKm)} km. À cette altitude, le satellite orbite à environ 95 minutes par tour autour de la Terre.`
+                  const inclinationTooltip = Math.abs(satellite.inclination - 53) <= 6
+                    ? `Inclinaison : ${satellite.inclination.toFixed(1)}°. Coquille principale Starlink — couvre les latitudes moyennes.`
+                    : Math.abs(satellite.inclination - 97.6) <= 6
+                      ? `Inclinaison : ${satellite.inclination.toFixed(1)}°. Coquille polaire (direct-to-cell) — orbite presque perpendiculaire à l'équateur, couvre aussi les pôles.`
+                      : `Inclinaison : ${satellite.inclination.toFixed(1)}°. Angle entre le plan de l'orbite et l'équateur terrestre.`
+                  const statusTooltip = status.label === 'RAISING ORBIT'
+                    ? 'RAISING ORBIT : le satellite est en cours de montée vers son orbite opérationnelle (généralement 550 km).'
+                    : status.label === 'OPERATIONAL'
+                      ? 'OPERATIONAL : le satellite est en orbite opérationnelle et fonctionne normalement.'
+                      : 'Autre : statut non classé dans les catégories standards.'
+                  return (
+                    <article
+                      key={satellite.noradId}
+                      className="satellite-row"
+                      style={{ borderLeftColor: inclinationColor(satellite.inclination) }}
+                    >
+                      <div>
+                        <strong>{satellite.name}</strong>
+                        <span>NORAD {satellite.noradId}</span>
+                      </div>
+                      <div>
+                        <strong title={altitudeTooltip}>{formatNumber(satellite.altitudeKm)} km</strong>
+                        <Badge tone={status.tone} className="satellite-status" title={statusTooltip}>
+                          {status.label}
+                        </Badge>
+                      </div>
+                      <div className="satellite-inclination" style={{ color: inclinationColor(satellite.inclination) }} title={inclinationTooltip}>
+                        {formatNumber(satellite.inclination, 1)}° inc.
+                      </div>
+                    </article>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -705,10 +801,10 @@ export default function MissionApp() {
     <div className="app">
       <header className="header">
         <a className="brand" href="#top"><strong>SPACEX</strong><span>MISSION DATA</span></a>
-        <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a><a href="#data-status">Data status</a></nav>
+        <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a><a href="#stats">Stats</a><a href="#data-status">Data status</a></nav>
         <div className="source-state"><i /> LL2 + SPACE-TRACK</div>
       </header>
-      <main><LaunchesSection /><EventsSection /><StarlinkSection /><CacheStatusSection /></main>
+      <main><LaunchesSection /><EventsSection /><StarlinkSection /><StatsDashboard /><CacheStatusSection /></main>
       <footer>
         <div className="brand"><strong>SPACEX</strong><span>COMMUNITY DATA</span></div>
         <p>Launch data by The Space Devs. Orbital elements by Space-Track.org. Not affiliated with SpaceX.</p>

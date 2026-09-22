@@ -72,7 +72,7 @@ function LaunchCadencePanel({ stats }: { stats: Stats }) {
         />
         <StatsCard
           label="Most in a year"
-          value={launchCadence.mostLaunchesInYear.count}
+          value={launchCadence.mostLaunchesInYear.completed}
           unit="launches"
           suffix={`(${launchCadence.mostLaunchesInYear.year})`}
           tone="go"

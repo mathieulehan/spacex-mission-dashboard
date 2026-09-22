@@ -1,5 +1,5 @@
 import type { StatsSnapshot } from './stats-types.js'
-import { STATS_FALLBACK_SNAPSHOT, STATS_CACHE_KEY } from './stats-types.js'
+import { STATS_FALLBACK_SNAPSHOT } from './stats-fallback.js'
 import { ZodError } from 'zod'
 import { UpstreamError } from './upstream.js'
 

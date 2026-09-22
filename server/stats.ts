@@ -44,7 +44,7 @@ export const SPACEXNOW_BOOTSTRAP: SpaceXNowStats = {
       { year: 2012, planned: 2, completed: 2, rate: 100 },
       { year: 2010, planned: 2, completed: 2, rate: 100 },
     ],
-    mostLaunchesInYear: { year: 2025, count: 167 },
+    mostLaunchesInYear: { year: 2025, planned: 145, completed: 167, rate: 76.55 },
     launchGoal2026: { planned: 145, completed: 111, rate: 76.55 },
   },
   boosters: {
@@ -222,7 +222,7 @@ export type LaunchCadenceStats = {
   mostSuccessive: number
   currentSuccessive: number
   launchesPerYear: LaunchPerYear[]
-  mostLaunchesInYear: { year: number; count: number }
+  mostLaunchesInYear: LaunchPerYear
   launchGoal2026: { planned: number; completed: number; rate: number }
 }
 
@@ -408,9 +408,9 @@ async function scrapeSpacexnowStats(
 
     const mostLaunchesInYear = launchesPerYear.length
       ? launchesPerYear.reduce((max, entry) =>
-          entry.completed > max.count ? entry : max,
+          entry.completed > max.completed ? entry : max,
         launchesPerYear[0])
-      : { year: 2025, count: 167 }
+      : { year: 2025, planned: 145, completed: 167, rate: 76.55 }
 
     // Parse launch goal from the launches per year table
     let launchGoal2026Planned = 145
@@ -643,10 +643,7 @@ const launchCadenceSchema = z.object({
   mostSuccessive: z.number(),
   currentSuccessive: z.number(),
   launchesPerYear: z.array(launchPerYearSchema),
-  mostLaunchesInYear: z.object({
-    year: z.number(),
-    count: z.number(),
-  }),
+  mostLaunchesInYear: launchPerYearSchema,
   launchGoal2026: z.object({
     planned: z.number(),
     completed: z.number(),

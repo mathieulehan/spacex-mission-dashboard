@@ -5,12 +5,14 @@ export function Badge({
   tone = 'neutral',
   children,
   className,
+  title,
 }: {
   tone?: 'live' | 'go' | 'warning' | 'neutral'
   children: ReactNode
   className?: string
+  title?: string
 }) {
-  return <span className={`badge badge--${tone}${className ? ` ${className}` : ''}`}>{children}</span>
+  return <span className={`badge badge--${tone}${className ? ` ${className}` : ''}`} title={title}>{children}</span>
 }
 export function ExternalLink({
   href,

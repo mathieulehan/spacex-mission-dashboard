@@ -136,6 +136,7 @@ export type StarlinkSummary = {
     raan: number
     inclination: number
     anomaly: number
+    altitudeKm?: number
   }>
   positions: Array<{
     id: number
@@ -156,6 +157,13 @@ export type StarlinkSummary = {
   }>
 }
 
+export type LaunchPerYear = {
+  year: number
+  planned: number
+  completed: number
+  rate: number
+}
+
 export type StatsLaunchPerYear = {
   year: number
   planned: number
@@ -170,8 +178,8 @@ export type StatsLaunchCadence = {
   successRate: number
   mostSuccessive: number
   currentSuccessive: number
-  launchesPerYear: StatsLaunchPerYear[]
-  mostLaunchesInYear: { year: number; count: number }
+  launchesPerYear: LaunchPerYear[]
+  mostLaunchesInYear: LaunchPerYear
   launchGoal2026: { planned: number; completed: number; rate: number }
 }
 
@@ -253,6 +261,7 @@ export type StatsBusiness = {
 export type Stats = {
   fetchedAt: string
   stale: boolean
+  source?: 'spacexnow' | 'api' | 'fallback'
   launchCadence: StatsLaunchCadence
   boosters: StatsBooster
   starlink: StatsStarlink
@@ -260,6 +269,34 @@ export type Stats = {
   dragons: StatsDragon
   capsules: StatsCapsule
   business: StatsBusiness
+  starlinkSubscribers?: number | null
+  launchesThisYear?: number | null
+  launchesThisYearGoal?: number | null
+  totalLaunches?: number | null
+  totalLaunchesSuccessRate?: number | null
+  boosterReflights?: number | null
+  boosterLandingSuccessRate?: number | null
+  maxBoosterFlights?: number | null
+  starlinkSatsInOrbit?: number | null
+  falcon9Launches?: number | null
+  falcon9SuccessRate?: number | null
+  falconHeavyLaunches?: number | null
+  starshipLaunches?: number | null
+  starshipSuccessRate?: number | null
+  fastestTurnaroundMinutes?: number | null
+  fastestBoosterTurnaroundDays?: number | null
+  busiestLaunchSiteName?: string | null
+  busiestLaunchSiteLaunches?: number | null
+  capsuleReflights?: number | null
+  capsuleLandingSuccessRate?: number | null
+  crewFlownTotal?: number | null
+  marketSharePercentage?: number | null
+  revenueEstimateUsd?: number | null
+  employeesEstimate?: number | null
+  falconHeavyTotalLaunches?: number | null
+  falconHeavySuccessRate?: number | null
+  dragonCargoMassUpKg?: number | null
+  dragonCargoMassDownKg?: number | null
 }
 
 export type CacheStatus = {
@@ -274,38 +311,4 @@ export type CacheStatus = {
     nextAttemptReason: string
   }>
   missionDetailsStored: number
-}
-
-export type Stats = {
-  fetchedAt: string
-  stale: boolean
-  source: 'spacexnow' | 'api' | 'fallback'
-  starlinkSubscribers: number | null
-  launchesThisYear: number | null
-  launchesThisYearGoal: number | null
-  totalLaunches: number | null
-  totalLaunchesSuccessRate: number | null
-  boosterReflights: number | null
-  boosterLandingSuccessRate: number | null
-  maxBoosterFlights: number | null
-  starlinkSatsInOrbit: number | null
-  falcon9Launches: number | null
-  falcon9SuccessRate: number | null
-  falconHeavyLaunches: number | null
-  starshipLaunches: number | null
-  starshipSuccessRate: number | null
-  fastestTurnaroundMinutes: number | null
-  fastestBoosterTurnaroundDays: number | null
-  busiestLaunchSiteName: string | null
-  busiestLaunchSiteLaunches: number | null
-  capsuleReflights: number | null
-  capsuleLandingSuccessRate: number | null
-  crewFlownTotal: number | null
-  marketSharePercentage: number | null
-  revenueEstimateUsd: number | null
-  employeesEstimate: number | null
-  falconHeavyTotalLaunches: number | null
-  falconHeavySuccessRate: number | null
-  dragonCargoMassUpKg: number | null
-  dragonCargoMassDownKg: number | null
 }

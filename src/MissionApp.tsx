@@ -586,7 +586,7 @@ function OrbitPlot({ data }: { data: StarlinkSummary }) {
         <i
           key={point.id}
           className="orbit-dot"
-          title={`${point.name} — Satellite à ${Math.round(point.altitudeKm)} km d'altitude. Son orbite est inclinée de ${point.inclination.toFixed(1)}° par rapport à l'équateur (quasi polaire). RAAN = direction de l'orbite dans l'espace. Anomaly = où il se trouve sur son orbite à cet instant.`}
+          title={`${point.name} — Satellite à ${Math.round(point.altitudeKm ?? 0)} km d'altitude. Son orbite est inclinée de ${point.inclination.toFixed(1)}° par rapport à l'équateur (quasi polaire). RAAN = direction de l'orbite dans l'espace. Anomaly = où il se trouve sur son orbite à cet instant.`}
           style={{
             left: `${(point.raan / 360) * 100}%`,
             top: `${100 - (Math.min(point.inclination, 100) / 100) * 100}%`,

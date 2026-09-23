@@ -17,14 +17,16 @@ function StatsCard({
   label: string
   value: string | number
   unit?: string
-  suffix?: string | React.ReactNode
+  suffix?: React.ReactNode
   tone?: 'go' | 'warning' | 'neutral'
 }) {
   return (
     <div className={`stat-card stat-card--${tone ?? 'neutral'}`}>
       <p className="stat-card__label">{label}</p>
       <p className="stat-card__value">
-        {typeof value === 'number' ? formatNumber(value, 0) : value}
+        <span className="stat-card__number">
+          {typeof value === 'number' ? formatNumber(value, 0) : value}
+        </span>
         {unit ? <span className="stat-card__unit">{unit}</span> : null}
         {suffix ? <span className="stat-card__suffix">{suffix}</span> : null}
       </p>
@@ -61,20 +63,20 @@ function LaunchCadencePanel({ stats }: { stats: Stats }) {
         <StatsCard
           label="Current streak"
           value={launchCadence.currentSuccessive}
-          suffix="consecutive"
+          suffix={<span>consecutive</span>}
           tone="go"
         />
         <StatsCard
           label="Longest streak"
           value={launchCadence.mostSuccessive}
-          suffix="consecutive"
+          suffix={<span>consecutive</span>}
           tone="neutral"
         />
         <StatsCard
           label="Most in a year"
           value={launchCadence.mostLaunchesInYear.completed}
           unit="launches"
-          suffix={`(${launchCadence.mostLaunchesInYear.year})`}
+          suffix={<span>({launchCadence.mostLaunchesInYear.year})</span>}
           tone="go"
         />
       </div>
@@ -148,7 +150,7 @@ function BoosterPanel({ stats }: { stats: Stats }) {
       </div>
 
       <div className="stats-row">
-        <StatsCard label="Landed" value={boosters.totalLanded} suffix={`/${boosters.totalAttempts}`} tone="go" />
+        <StatsCard label="Landed" value={boosters.totalLanded} suffix={<span>/{boosters.totalAttempts}</span>} tone="go" />
         <StatsCard label="Reflown" value={boosters.reflown} tone="neutral" />
         <StatsCard
           label="Most flights"
@@ -161,7 +163,7 @@ function BoosterPanel({ stats }: { stats: Stats }) {
       <div className="stats-panel__block5">
         <p className="eyebrow">Block 5 performance</p>
         <div className="stats-row stats-row--tight">
-          <StatsCard label="Landed" value={boosters.block5Landed} suffix={`/${boosters.block5Attempts}`} tone="go" />
+          <StatsCard label="Landed" value={boosters.block5Landed} suffix={<span>/{boosters.block5Attempts}</span>} tone="go" />
           <StatsCard label="Rate" value={boosters.block5Rate.toFixed(2)} unit="%" tone="go" />
           <StatsCard label="Reflown" value={boosters.block5Reflown} tone="neutral" />
         </div>
@@ -305,7 +307,7 @@ function CapsulesPanel({ stats }: { stats: Stats }) {
         <StatsCard label="Landing rate" value={stats.capsules.rate.toFixed(2)} unit="%" tone="go" />
       </div>
       <div className="stats-row">
-        <StatsCard label="Landed" value={stats.capsules.landed} suffix={`/${stats.capsules.attempts}`} tone="go" />
+        <StatsCard label="Landed" value={stats.capsules.landed} suffix={<span>/{stats.capsules.attempts}</span>} tone="go" />
         <StatsCard label="Reflown" value={stats.capsules.reflown} tone="neutral" />
       </div>
     </div>

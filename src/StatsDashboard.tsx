@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { SectionHeading, Loading, ErrorState } from './components'
 import { missionApi } from './api'
@@ -17,7 +17,7 @@ function StatsCard({
   label: string
   value: string | number
   unit?: string
-  suffix?: string
+  suffix?: string | React.ReactNode
   tone?: 'go' | 'warning' | 'neutral'
 }) {
   return (
@@ -46,7 +46,7 @@ function LaunchCadencePanel({ stats }: { stats: Stats }) {
         <StatsCard
           label="Total launches"
           value={launchCadence.totalLaunches}
-          suffix="/ {launchCadence.totalLaunches + launchCadence.failedLaunches}"
+          suffix={`/${launchCadence.totalLaunches + launchCadence.failedLaunches}`}
           tone="go"
         />
       </div>
@@ -148,7 +148,7 @@ function BoosterPanel({ stats }: { stats: Stats }) {
       </div>
 
       <div className="stats-row">
-        <StatsCard label="Landed" value={boosters.totalLanded} suffix="/ {boosters.totalAttempts}" tone="go" />
+        <StatsCard label="Landed" value={boosters.totalLanded} suffix={`/${boosters.totalAttempts}`} tone="go" />
         <StatsCard label="Reflown" value={boosters.reflown} tone="neutral" />
         <StatsCard
           label="Most flights"
@@ -161,7 +161,7 @@ function BoosterPanel({ stats }: { stats: Stats }) {
       <div className="stats-panel__block5">
         <p className="eyebrow">Block 5 performance</p>
         <div className="stats-row stats-row--tight">
-          <StatsCard label="Landed" value={boosters.block5Landed} suffix="/ {boosters.block5Attempts}" tone="go" />
+          <StatsCard label="Landed" value={boosters.block5Landed} suffix={`/${boosters.block5Attempts}`} tone="go" />
           <StatsCard label="Rate" value={boosters.block5Rate.toFixed(2)} unit="%" tone="go" />
           <StatsCard label="Reflown" value={boosters.block5Reflown} tone="neutral" />
         </div>
@@ -305,7 +305,7 @@ function CapsulesPanel({ stats }: { stats: Stats }) {
         <StatsCard label="Landing rate" value={stats.capsules.rate.toFixed(2)} unit="%" tone="go" />
       </div>
       <div className="stats-row">
-        <StatsCard label="Landed" value={stats.capsules.landed} suffix="/ {stats.capsules.attempts}" tone="go" />
+        <StatsCard label="Landed" value={stats.capsules.landed} suffix={`/${stats.capsules.attempts}`} tone="go" />
         <StatsCard label="Reflown" value={stats.capsules.reflown} tone="neutral" />
       </div>
     </div>

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Countdown, ErrorState, ExternalLink, Loading, SectionHeading } from './components'
 import { StatsDashboard } from './StatsDashboard'
+import { NextLaunchesSection } from './NextLaunches'
 import { missionApi } from './api'
 import { launchCalendarHref } from './calendar'
 import type { Launch, LaunchDetail, SpaceEvent, StarlinkSummary, Stats } from './types'
@@ -801,10 +802,10 @@ export default function MissionApp() {
     <div className="app">
       <header className="header">
         <a className="brand" href="#top"><strong>SPACEX</strong><span>MISSION DATA</span></a>
-        <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a><a href="#stats">Stats</a><a href="#data-status">Data status</a></nav>
+        <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a><a href="#next-launches">Next</a><a href="#stats">Stats</a><a href="#data-status">Data status</a></nav>
         <div className="source-state"><i /> LL2 + SPACE-TRACK</div>
       </header>
-      <main><LaunchesSection /><EventsSection /><StarlinkSection /><StatsDashboard /><CacheStatusSection /></main>
+      <main><LaunchesSection /><EventsSection /><StarlinkSection /><NextLaunchesSection /><StatsDashboard /><CacheStatusSection /></main>
       <footer>
         <div className="brand"><strong>SPACEX</strong><span>COMMUNITY DATA</span></div>
         <p>Launch data by The Space Devs. Orbital elements by Space-Track.org. Not affiliated with SpaceX.</p>

@@ -286,6 +286,37 @@ export function createApp(options: AppOptions = {}) {
     }),
   )
 
+  app.get(
+    '/api/next-launches',
+    route(async (_request, response) => {
+      const url = new URL(`${LL2_BASE_URL}/launch/upcoming/`)
+      url.search = new URLSearchParams({
+        format: 'json',
+        search: 'SpaceX',
+        limit: '6',
+        ordering: 'net',
+      }).toString()
+      try {
+        const launches = await getLl2(
+          'll2:next-launches',
+          url.toString(),
+          ll2LaunchesSchema,
+        )
+        response.json({
+          results: launches.value.results.map(normalizeLaunch),
+          total: launches.value.count,
+          stale: launches.stale,
+        })
+      } catch (error) {
+        if (error instanceof UpstreamError && error.message.includes('429')) {
+          response.json({ results: [], total: 0, stale: true })
+          return
+        }
+        throw error
+      }
+    }),
+  )
+
   const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
     void _next
     if (error instanceof z.ZodError) {

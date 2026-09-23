@@ -32,11 +32,12 @@ export function normalizeLaunch(launch: Ll2Launch) {
     orbit: launch.mission?.orbit?.name ?? null,
     orbitAbbrev: launch.mission?.orbit?.abbrev ?? null,
     pad: launch.pad?.name ?? null,
-    location: launch.pad?.location.name ?? null,
+    location: launch.pad?.location?.name ?? null,
     latitude: toNumber(launch.pad?.latitude),
     longitude: toNumber(launch.pad?.longitude),
     webcastLive: launch.webcast_live,
     imageUrl: launch.image ?? null,
+    launchLocationName: launch.launch_location?.name ?? null,
   }
 }
 

@@ -45,4 +45,5 @@ export const missionApi = {
   starlink: () => getJson<StarlinkSummary>('/api/starlink'),
   cacheStatus: () => getJson<CacheStatus>('/api/cache'),
   stats: () => getJson<Stats>('/api/stats'),
+  nextLaunches: () => getJson<Launches>('/api/next-launches'),
 }

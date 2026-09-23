@@ -47,6 +47,7 @@ export const launchesFixture: Launches = {
       longitude: -80.6042,
       webcastLive: false,
       imageUrl: null,
+      launchLocationName: 'Kennedy Space Center, FL, USA',
     },
     {
       id: 'launch-2',
@@ -84,6 +85,7 @@ export const launchesFixture: Launches = {
       longitude: -120.611,
       webcastLive: false,
       imageUrl: null,
+      launchLocationName: 'Vandenberg SFB, CA, USA',
     },
   ],
 }

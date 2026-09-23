@@ -37,7 +37,6 @@ export function normalizeLaunch(launch: Ll2Launch) {
     longitude: toNumber(launch.pad?.longitude),
     webcastLive: launch.webcast_live,
     imageUrl: launch.image ?? null,
-    launchLocationName: launch.launch_location?.name ?? null,
   }
 }
 

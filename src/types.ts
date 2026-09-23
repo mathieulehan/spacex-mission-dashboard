@@ -26,7 +26,6 @@ export type Launch = {
   longitude: number | null
   webcastLive: boolean
   imageUrl: string | null
-  launchLocationName: string | null
 }
 
 export type Launches = {

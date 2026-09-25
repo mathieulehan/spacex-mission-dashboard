@@ -5,6 +5,7 @@ import { missionApi } from './api'
 import { formatDate, formatNumber } from './utils'
 import type { Stats } from './types'
 import AnnualLaunchRecordChart from './AnnualLaunchRecordChart'
+import LandingSitesChart from './LandingSitesChart'
 
 const POLL_INTERVAL_MS = 10 * 60 * 1_000 // 10 minutes – matches spacexnow.com update cadence
 
@@ -37,7 +38,6 @@ function StatsCard({
 
 function LaunchCadencePanel({ stats }: { stats: Stats }) {
   const { launchCadence } = stats
-  const years = launchCadence.launchesPerYear.slice(0, 8)
 
   return (
     <div className="stats-panel">
@@ -215,17 +215,6 @@ function StarlinkStatPanel({ stats }: { stats: Stats }) {
 }
 
 function LandingSitesPanel({ stats }: { stats: Stats }) {
-  const sites = [
-    { key: 'LZ1', label: 'LZ-1', site: stats.landingSites.LZ1 },
-    { key: 'LZ2', label: 'LZ-2', site: stats.landingSites.LZ2 },
-    { key: 'LZ4', label: 'LZ-4', site: stats.landingSites.LZ4 },
-    { key: 'LZ40', label: 'LZ-40', site: stats.landingSites.LZ40 },
-    { key: 'ASOG', label: 'ASOG', site: stats.landingSites.ASOG },
-    { key: 'JRTI', label: 'JRTI', site: stats.landingSites.JRTI },
-    { key: 'OCISLY', label: 'OCISLY', site: stats.landingSites.OCISLY },
-    { key: 'Catch', label: 'Mechazilla', site: stats.landingSites.Catch },
-  ]
-
   return (
     <div className="stats-panel">
       <div className="stats-panel__header">
@@ -234,17 +223,7 @@ function LandingSitesPanel({ stats }: { stats: Stats }) {
           <h3>Recovery performance by location</h3>
         </div>
       </div>
-      <div className="site-grid">
-        {sites.map(({ key, label, site }) => (
-          <div key={key} className="site-card">
-            <span className="site-card__name">{label}</span>
-            <span className="site-card__rate" style={{ color: site.rate >= 99 ? 'var(--color-go)' : site.rate >= 95 ? 'var(--color-warning)' : 'var(--color-accent-muted)' }}>
-              {site.rate.toFixed(1)}%
-            </span>
-            <span className="site-card__count">{site.landed}/{site.attempts}</span>
-          </div>
-        ))}
-      </div>
+      <LandingSitesChart sites={stats.landingSites} />
     </div>
   )
 }

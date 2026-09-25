@@ -6,6 +6,8 @@ import { formatDate, formatNumber } from './utils'
 import type { Stats } from './types'
 import AnnualLaunchRecordChart from './AnnualLaunchRecordChart'
 import LandingSitesChart from './LandingSitesChart'
+import GoalBarChart from './GoalBarChart'
+
 
 const POLL_INTERVAL_MS = 10 * 60 * 1_000 // 10 minutes – matches spacexnow.com update cadence
 
@@ -94,14 +96,7 @@ function LaunchCadencePanel({ stats }: { stats: Stats }) {
           <span>{formatNumber(launchCadence.launchGoal2026.planned, 0)}</span>
           <span className="goal-rate">{launchCadence.launchGoal2026.rate.toFixed(1)}%</span>
         </div>
-        <div className="goal-bar">
-          <div
-            className="goal-bar__fill"
-            style={{
-              width: `${Math.min(100, launchCadence.launchGoal2026.rate)}%`,
-            }}
-          />
-        </div>
+        <GoalBarChart goal={launchCadence.launchGoal2026} />
       </div>
     </div>
   )

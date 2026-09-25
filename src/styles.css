@@ -1181,55 +1181,6 @@ footer > a { justify-self: end; }
 .stat-card--warning { border-left: 3px solid var(--amber); }
 .stat-card--neutral { border-left: 3px solid var(--line); }
 
-.bar-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.bar-row {
-  display: grid;
-  grid-template-columns: 48px 1fr 40px;
-  align-items: center;
-  gap: 10px;
-}
-
-.bar-year {
-  font: .62rem 'Space Mono', monospace;
-  color: var(--muted);
-  text-align: right;
-}
-
-.bar-track {
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, .06);
-  overflow: hidden;
-  display: flex;
-  gap: 2px;
-}
-
-.bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width .4s ease;
-}
-
-.bar-fill--planned {
-  background: rgba(255, 255, 255, .12);
-}
-
-.bar-fill--completed {
-  background: var(--blue);
-}
-
-.bar-label {
-  font: .62rem 'Space Mono', monospace;
-  color: var(--muted);
-  text-align: left;
-}
-
 .stats-panel__chart h4 {
   margin: 0 0 8px;
   font-size: .72rem;
@@ -1253,21 +1204,6 @@ footer > a { justify-self: end; }
   font: .68rem 'Space Mono', monospace;
   color: var(--muted);
   margin-left: auto;
-}
-
-.goal-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, .06);
-  overflow: hidden;
-  margin-top: 6px;
-}
-
-.goal-bar__fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--blue), #a371f7);
-  border-radius: 3px;
-  transition: width .4s ease;
 }
 
 .turnaround-list {
@@ -1324,40 +1260,6 @@ footer > a { justify-self: end; }
 
 .lift__mission {
   font: .65rem 'Space Mono', monospace;
-  color: var(--muted);
-}
-
-.site-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.site-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 8px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: rgba(8, 12, 18, .3);
-}
-
-.site-card__name {
-  font: .65rem 'Space Mono', monospace;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-}
-
-.site-card__rate {
-  font: 1.1rem 'Space Mono', monospace;
-  font-weight: 700;
-}
-
-.site-card__count {
-  font: .6rem 'Space Mono', monospace;
   color: var(--muted);
 }
 
@@ -1419,10 +1321,6 @@ footer > a { justify-self: end; }
 
   .stats-row--tight {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .site-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 
   .business-grid {

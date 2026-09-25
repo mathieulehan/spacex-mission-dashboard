@@ -1012,7 +1012,8 @@ footer > a { justify-self: end; }
 
 @media (max-width: 950px) {
   .header { grid-template-columns: 1fr auto; }
-  .header nav { display: none; }
+  .header nav { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 16px; padding-bottom: 4px; width: 100%; }
+  .header nav a { white-space: nowrap; font-size: .72rem; }
   .mission-hero { grid-template-columns: 1fr; }
   .mission-hero__image { height: 350px; }
   .mission-hero__shade { background: linear-gradient(0deg, var(--panel), transparent 70%); }

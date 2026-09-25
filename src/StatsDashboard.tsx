@@ -4,6 +4,7 @@ import { SectionHeading, Loading, ErrorState } from './components'
 import { missionApi } from './api'
 import { formatDate, formatNumber } from './utils'
 import type { Stats } from './types'
+import AnnualLaunchRecordChart from './AnnualLaunchRecordChart'
 
 const POLL_INTERVAL_MS = 10 * 60 * 1_000 // 10 minutes – matches spacexnow.com update cadence
 
@@ -82,32 +83,7 @@ function LaunchCadencePanel({ stats }: { stats: Stats }) {
       </div>
 
       <div className="stats-panel__chart">
-        <p className="eyebrow">Annual launch record</p>
-        <div className="bar-chart">
-          {years.map((entry) => {
-            const maxCompleted = Math.max(...years.map((y) => y.completed), 1)
-            const maxPlanned = Math.max(...years.map((y) => y.planned), 1)
-            const pct = Math.round((entry.completed / entry.planned) * 100)
-            return (
-              <div key={entry.year} className="bar-row">
-                <span className="bar-year">{entry.year}</span>
-                <div className="bar-track">
-                  <div
-                    className="bar-fill bar-fill--planned"
-                    style={{ width: `${(entry.planned / maxPlanned) * 100}%` }}
-                    title={`Planned: ${entry.planned}`}
-                  />
-                  <div
-                    className="bar-fill bar-fill--completed"
-                    style={{ width: `${(entry.completed / maxPlanned) * 100}%` }}
-                    title={`Completed: ${entry.completed} (${pct}%)`}
-                  />
-                </div>
-                <span className="bar-label">{pct}%</span>
-              </div>
-            )
-          })}
-        </div>
+        <AnnualLaunchRecordChart cadence={launchCadence} />
       </div>
 
       <div className="stats-panel__goal">

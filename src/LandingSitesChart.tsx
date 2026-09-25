@@ -130,8 +130,8 @@ function LandingSitesChart({ sites }: { sites: StatsLandingSites }) {
   }, [sites])
 
   return (
-    <div className="echarts-container">
-      <div ref={chartRef} className="landing-sites-chart" />
+    <div className="echarts-container" style={{ height: 250 }}>
+      <div ref={chartRef} className="landing-sites-chart" style={{ height: '100%' }} />
     </div>
   )
 }

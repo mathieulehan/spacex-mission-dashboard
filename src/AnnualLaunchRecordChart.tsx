@@ -150,8 +150,8 @@ function AnnualLaunchRecordChart({ cadence }: { cadence: StatsLaunchCadence }) {
   }, [cadence])
 
   return (
-    <div className="echarts-container">
-      <div ref={chartRef} className="annual-launch-chart" />
+    <div className="echarts-container" style={{ height: 200 }}>
+      <div ref={chartRef} className="annual-launch-chart" style={{ height: '100%' }} />
     </div>
   )
 }

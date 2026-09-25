@@ -111,7 +111,7 @@ function GoalBarChart({ goal }: { goal: Goal }) {
 
   return (
     <div className="echarts-container" style={{ height: 56 }}>
-      <div ref={chartRef} className="goal-bar-chart" />
+      <div ref={chartRef} className="goal-bar-chart" style={{ height: '100%' }} />
     </div>
   )
 }

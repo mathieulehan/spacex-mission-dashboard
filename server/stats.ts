@@ -1,5 +1,6 @@
 import type { CacheStore } from './cache-store.js'
 import { UpstreamError } from './upstream.js'
+import { LL2BoosterService } from './ll2-booster-service.js'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -560,14 +561,17 @@ async function scrapeSpacexnowStats(
 export class StatsService {
   private cache: CacheStore
   private fetchImpl: typeof fetch
+  private ll2BoosterService: LL2BoosterService
   private blockedUntil = 0
 
   constructor(
     fetchImpl: typeof fetch,
     cache: CacheStore,
+    ll2BoosterService: LL2BoosterService,
   ) {
     this.fetchImpl = fetchImpl
     this.cache = cache
+    this.ll2BoosterService = ll2BoosterService
   }
 
   getRetryAt() {
@@ -590,7 +594,17 @@ export class StatsService {
     }
 
     try {
+      // Récupérer les stats via scraping spacexnow (launchCadence, starlink, etc.)
       const stats = await scrapeSpacexnowStats(this.fetchImpl)
+
+      // Remplacer les boosters par les données LL2 (plus fiables, pas derrière Cloudflare)
+      try {
+        const ll2BoosterStats = await this.ll2BoosterService.getBoosterStats()
+        stats.boosters = ll2BoosterStats.value
+      } catch (ll2Error) {
+        console.warn('LL2 booster stats unavailable, using bootstrap:', ll2Error)
+      }
+
       await this.cache.set(CACHE_KEY, stats)
       this.blockedUntil = 0
       return { value: stats, stale: false }

@@ -28,6 +28,7 @@ import { StarlinkService, type SpaceTrackCredentials } from './starlink.js'
 import { TursoCache } from './turso-cache.js'
 import { UpstreamClient, UpstreamError } from './upstream.js'
 import { StatsService } from './stats.js'
+import { LL2BoosterService } from './ll2-booster-service.js'
 
 const LL2_BASE_URL = 'https://ll.thespacedevs.com/2.2.0'
 const LL2_CACHE_TTL_MS = 10 * 60 * 1_000
@@ -81,9 +82,14 @@ export function createApp(options: AppOptions = {}) {
     starlinkCache,
     spacetrackCredentials,
   )
+  const ll2BoosterService = new LL2BoosterService(
+    options.fetchImpl ?? fetch,
+    ll2Cache,
+  )
   const statsService = new StatsService(
     options.fetchImpl ?? fetch,
     ll2Cache,
+    ll2BoosterService,
   )
   const ll2RetryAt = new Map<string, number>()
 

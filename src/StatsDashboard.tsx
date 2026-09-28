@@ -1,376 +1,330 @@
-import React, { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { SectionHeading, Loading, ErrorState } from './components'
-import { missionApi } from './api'
-import { formatDate, formatNumber } from './utils'
-import type { Stats } from './types'
-import AnnualLaunchRecordChart from './AnnualLaunchRecordChart'
-import LandingSitesChart from './LandingSitesChart'
-import GoalBarChart from './GoalBarChart'
+import { useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { statsApi, FALLBACK_STATS } from './api';
+import type { StatsData } from './types';
 
+// ── Animated counter ──────────────────────────────────────────────────────────
 
-const POLL_INTERVAL_MS = 10 * 60 * 1_000 // 10 minutes – matches spacexnow.com update cadence
+function AnimatedCounter({ value, suffix = '', duration = 1200 }: {
+  value: number;
+  suffix?: string;
+  duration?: number;
+}) {
+  const [display, setDisplay] = useState(0);
+  const startRef = useRef<number | null>(null);
+  const frameRef = useRef<number>(0);
 
-function StatsCard({
+  useEffect(() => {
+    if (startRef.current !== null) return;
+    startRef.current = performance.now();
+    const tick = (now: number) => {
+      const elapsed = now - startRef.current;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(Math.round(value * eased));
+      if (t < 1) frameRef.current = requestAnimationFrame(tick);
+      else startRef.current = null;
+    };
+    frameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      startRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, duration]);
+
+  return <>{display}{suffix}</>;
+}
+
+// ── Bar chart (SVG, no external deps) ─────────────────────────────────────────
+
+function BarChart({
+  data,
+  color,
+  yLabel,
+  unit,
+  max,
+  height = 180,
+}: {
+  data: Array<{ year: number; launches: number }>;
+  color: string;
+  yLabel: string;
+  unit?: string;
+  max: number;
+  height?: number;
+}) {
+  const padding = { top: 10, right: 16, bottom: 32, left: 44 };
+  const barWidth = Math.max(4, (100 - padding.left - padding.right) / data.length - 4);
+  const chartHeight = height - padding.top - padding.bottom;
+
+  return (
+    <div className="stat-chart">
+      <svg
+        className="stat-chart__svg"
+        viewBox={`0 0 ${100} ${height}`}
+        role="img"
+        aria-label={`Graphique des lancements par année : ${data.map(d => `${d.year}: ${d.launches}`).join(', ')}`}
+      >
+        {/* grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map((frac) => (
+          <line
+            key={frac}
+            x1={padding.left}
+            y1={padding.top + chartHeight * (1 - frac)}
+            x2={100 - padding.right}
+            y2={padding.top + chartHeight * (1 - frac)}
+            stroke="rgba(255,255,255,0.06)"
+            strokeWidth={0.5}
+          />
+        ))}
+        {/* bars */}
+        {data.map((d) => {
+          const h = (d.launches / max) * chartHeight;
+          const x = padding.left + (100 - padding.left - padding.right) * (d.year - data[0].year) / (data[data.length - 1].year - data[0].year) + (100 - padding.left - padding.right) / data.length * 0.15;
+          const w = (100 - padding.left - padding.right) / data.length * 0.7;
+          return (
+            <g key={d.year}>
+              <rect
+                x={x}
+                y={padding.top + chartHeight - h}
+                width={w}
+                height={h}
+                fill={color}
+                rx={1}
+                className="stat-chart__bar"
+              />
+              <text
+                x={x + w / 2}
+                y={height - 8}
+                textAnchor="middle"
+                fill="rgba(255,255,255,0.35)"
+                fontSize={3.5}
+                fontFamily="'Space Mono', monospace"
+              >
+                {d.year}
+              </text>
+            </g>
+          );
+        })}
+        {/* y-axis label */}
+        <text
+          x={10}
+          y={padding.top + chartHeight / 2}
+          fill="rgba(255,255,255,0.3)"
+          fontSize={3.5}
+          fontFamily="'Space Mono', monospace"
+          transform={`rotate(-90 ${10} ${padding.top + chartHeight / 2})`}
+          textAnchor="middle"
+        >
+          {yLabel}
+        </text>
+      </svg>
+      <div className="stat-chart__tooltip" />
+    </div>
+  );
+}
+
+// ── Landing sites horizontal bar ───────────────────────────────────────────────
+
+function LandingSitesChart({ data }: { data: Array<{ site: string; landings: number; rate: number }> }) {
+  const max = Math.max(...data.map(d => d.landings));
+  const chartHeight = 160;
+  const rowHeight = chartHeight / data.length;
+
+  return (
+    <div className="stat-chart stat-chart--sites">
+      <svg
+        viewBox={`0 0 100 100`}
+        role="img"
+        aria-label="Graphique des sites d'atterrissage par nombre d'atterissages"
+      >
+        {data.map((d, i) => {
+          const barWidth = (d.landings / max) * 65;
+          const y = 8 + i * (100 - 16) / data.length;
+          return (
+            <g key={d.site}>
+              <text
+                x={2}
+                y={y + 5}
+                fill="rgba(255,255,255,0.5)"
+                fontSize={4}
+                fontFamily="'Space Mono', monospace"
+              >
+                {d.site}
+              </text>
+              <rect
+                x={20}
+                y={y}
+                width={barWidth}
+                height={6}
+                fill="url(#siteGrad)"
+                rx={1}
+                className="stat-chart__bar"
+              />
+              <text
+                x={20 + barWidth + 3}
+                y={y + 5}
+                fill="rgba(255,255,255,0.45)"
+                fontSize={3.5}
+                fontFamily="'Space Mono', monospace"
+              >
+                {d.landings} ({d.rate}%)
+              </text>
+            </g>
+          );
+        })}
+        <defs>
+          <linearGradient id="siteGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#69aaff" />
+            <stop offset="100%" stopColor="#5ce2a2" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  );
+}
+
+// ── Stat card ──────────────────────────────────────────────────────────────────
+
+function StatCard({
   label,
   value,
-  unit,
   suffix,
-  tone,
+  sublabel,
+  color,
 }: {
-  label: string
-  value: string | number
-  unit?: string
-  suffix?: React.ReactNode
-  tone?: 'go' | 'warning' | 'neutral'
+  label: string;
+  value: number;
+  suffix?: string;
+  sublabel?: string;
+  color: string;
 }) {
   return (
-    <div className={`stat-card stat-card--${tone ?? 'neutral'}`}>
-      <p className="stat-card__label">{label}</p>
-      <p className="stat-card__value">
-        <span className="stat-card__number">
-          {typeof value === 'number' ? formatNumber(value, 0) : value}
-        </span>
-        {unit ? <span className="stat-card__unit">{unit}</span> : null}
-        {suffix ? <span className="stat-card__suffix">{suffix}</span> : null}
-      </p>
-    </div>
-  )
+    <article className="stat-card">
+      <span className="stat-card__label" style={{ color }}>{label}</span>
+      <div className="stat-card__value" style={{ color }}>
+        <AnimatedCounter value={value} suffix={suffix} />
+      </div>
+      {sublabel && <span className="stat-card__sub">{sublabel}</span>}
+    </article>
+  );
 }
 
-function LaunchCadencePanel({ stats }: { stats: Stats }) {
-  const { launchCadence } = stats
-
-  return (
-    <div className="stats-panel">
-      <div className="stats-panel__header">
-        <div>
-          <p className="eyebrow">Launch cadence</p>
-          <h3>How fast SpaceX flies</h3>
-        </div>
-        <StatsCard
-          label="Total launches"
-          value={launchCadence.totalLaunches}
-          suffix={`/${launchCadence.totalLaunches + launchCadence.failedLaunches}`}
-          tone="go"
-        />
-      </div>
-
-      <div className="stats-row">
-        <StatsCard label="Successful" value={launchCadence.successfulLaunches} tone="go" />
-        <StatsCard label="Failed" value={launchCadence.failedLaunches} tone="warning" />
-        <StatsCard label="Success rate" value={launchCadence.successRate.toFixed(2)} unit="%" tone="go" />
-      </div>
-
-      <div className="stats-row">
-        <StatsCard
-          label="Current streak"
-          value={launchCadence.currentSuccessive}
-          suffix={<span>consecutive</span>}
-          tone="go"
-        />
-        <StatsCard
-          label="Longest streak"
-          value={launchCadence.mostSuccessive}
-          suffix={<span>consecutive</span>}
-          tone="neutral"
-        />
-        <StatsCard
-          label="Most in a year"
-          value={launchCadence.mostLaunchesInYear.completed}
-          unit="launches"
-          suffix={<span>({launchCadence.mostLaunchesInYear.year})</span>}
-          tone="go"
-        />
-      </div>
-
-      <div className="stats-panel__chart">
-        <AnnualLaunchRecordChart cadence={launchCadence} />
-      </div>
-
-      <div className="stats-panel__goal">
-        <p className="eyebrow">2026 launch goal</p>
-        <div className="goal-row">
-          <span>{formatNumber(launchCadence.launchGoal2026.completed, 0)}</span>
-          <span className="goal-separator">/</span>
-          <span>{formatNumber(launchCadence.launchGoal2026.planned, 0)}</span>
-          <span className="goal-rate">{launchCadence.launchGoal2026.rate.toFixed(1)}%</span>
-        </div>
-        <GoalBarChart goal={launchCadence.launchGoal2026} />
-      </div>
-    </div>
-  )
-}
-
-function BoosterPanel({ stats }: { stats: Stats }) {
-  const { boosters } = stats
-
-  return (
-    <div className="stats-panel">
-      <div className="stats-panel__header">
-        <div>
-          <p className="eyebrow">Booster reuse</p>
-          <h3>Landing & turnaround records</h3>
-        </div>
-        <StatsCard
-          label="Landing rate"
-          value={boosters.landingRate.toFixed(2)}
-          unit="%"
-          tone="go"
-        />
-      </div>
-
-      <div className="stats-row">
-        <StatsCard label="Landed" value={boosters.totalLanded} suffix={<span>/{boosters.totalAttempts}</span>} tone="go" />
-        <StatsCard label="Reflown" value={boosters.reflown} tone="neutral" />
-        <StatsCard
-          label="Most flights"
-          value={boosters.mostFlights.flights}
-          suffix={`(${boosters.mostFlights.booster})`}
-          tone="go"
-        />
-      </div>
-
-      <div className="stats-panel__block5">
-        <p className="eyebrow">Block 5 performance</p>
-        <div className="stats-row stats-row--tight">
-          <StatsCard label="Landed" value={boosters.block5Landed} suffix={<span>/{boosters.block5Attempts}</span>} tone="go" />
-          <StatsCard label="Rate" value={boosters.block5Rate.toFixed(2)} unit="%" tone="go" />
-          <StatsCard label="Reflown" value={boosters.block5Reflown} tone="neutral" />
-        </div>
-      </div>
-
-      <div className="stats-panel__turnarounds">
-        <h4>Fastest turnarounds</h4>
-        <div className="turnaround-list">
-          <div className="turnaround">
-            <span className="turnaround__duration">{boosters.fastestTurnaround.duration}</span>
-            <span className="turnaround__site">Booster</span>
-            <span className="turnaround__detail">{boosters.fastestTurnaround.booster}</span>
-          </div>
-          <div className="turnaround">
-            <span className="turnaround__duration">{boosters.fastestTurnaroundCapeCanaveral.duration}</span>
-            <span className="turnaround__site">CCSFS</span>
-            <span className="turnaround__detail">{boosters.fastestTurnaroundCapeCanaveral.firstFlight} → {boosters.fastestTurnaroundCapeCanaveral.secondFlight}</span>
-          </div>
-          <div className="turnaround">
-            <span className="turnaround__duration">{boosters.fastestTurnaroundVandenberg.duration}</span>
-            <span className="turnaround__site">VSFB</span>
-            <span className="turnaround__detail">{boosters.fastestTurnaroundVandenberg.firstFlight} → {boosters.fastestTurnaroundVandenberg.secondFlight}</span>
-          </div>
-          <div className="turnaround">
-            <span className="turnaround__duration">{boosters.fastestTurnaroundStarbase.duration}</span>
-            <span className="turnaround__site">Starbase</span>
-            <span className="turnaround__detail">{boosters.fastestTurnaroundStarbase.firstFlight} → {boosters.fastestTurnaroundStarbase.secondFlight}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function StarlinkStatPanel({ stats }: { stats: Stats }) {
-  const { starlink } = stats
-
-  return (
-    <div className="stats-panel stats-panel--alt">
-      <div className="stats-panel__header">
-        <div>
-          <p className="eyebrow">Starlink constellation</p>
-          <h3>Satellites in orbit</h3>
-        </div>
-        <StatsCard
-          label="In orbit"
-          value={starlink.inOrbit}
-          tone="go"
-        />
-      </div>
-
-      <div className="stats-row">
-        <StatsCard label="Total launches" value={starlink.totalLaunches} tone="neutral" />
-        <StatsCard label="Starlink flights" value={starlink.starlinkLaunches} tone="go" />
-        <StatsCard label="Starlink share" value={starlink.starlinkRate.toFixed(2)} unit="%" tone="neutral" />
-      </div>
-
-      <div className="stats-panel__lifts">
-        <h4>Heavy-lift records</h4>
-        <div className="lift-list">
-          <div className="lift">
-            <span className="lift__mass">{starlink.heaviestLeoLift.mass}</span>
-            <span className="lift__mission">{starlink.heaviestLeoLift.mission}</span>
-          </div>
-          <div className="lift">
-            <span className="lift__mass">{starlink.heaviestGtoLift.mass}</span>
-            <span className="lift__mission">{starlink.heaviestGtoLift.mission}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function LandingSitesPanel({ stats }: { stats: Stats }) {
-  return (
-    <div className="stats-panel">
-      <div className="stats-panel__header">
-        <div>
-          <p className="eyebrow">Landing sites</p>
-          <h3>Recovery performance by location</h3>
-        </div>
-      </div>
-      <LandingSitesChart sites={stats.landingSites} />
-    </div>
-  )
-}
-
-function DragonsPanel({ stats }: { stats: Stats }) {
-  return (
-    <div className="stats-panel stats-panel--compact">
-      <div className="stats-panel__header">
-        <div>
-          <p className="eyebrow">Dragon fleet</p>
-          <h3>Cargo & crew missions</h3>
-        </div>
-      </div>
-      <div className="stats-row">
-        <StatsCard label="Cargo" value={stats.dragons.cargoMissions} tone="neutral" />
-        <StatsCard label="Crew" value={stats.dragons.crewMissions} tone="go" />
-        <StatsCard label="Test" value={stats.dragons.testMissions} tone="neutral" />
-        <StatsCard label="Reflights" value={stats.dragons.reflights} tone="neutral" />
-      </div>
-      <div className="stats-panel__dragon-detail">
-        <p>ISS cargo: <strong>{stats.dragons.issCargoUp} up / {stats.dragons.issCargoDown} down</strong></p>
-        <p>Crew flown total: <strong>{stats.dragons.crewFlownTotal}</strong> · Currently in orbit: <strong>{stats.dragons.crewInOrbit}</strong></p>
-      </div>
-    </div>
-  )
-}
-
-function CapsulesPanel({ stats }: { stats: Stats }) {
-  return (
-    <div className="stats-panel stats-panel--compact">
-      <div className="stats-panel__header">
-        <div>
-          <p className="eyebrow">Capsule reuse</p>
-          <h3>Crew Dragon recovery</h3>
-        </div>
-        <StatsCard label="Landing rate" value={stats.capsules.rate.toFixed(2)} unit="%" tone="go" />
-      </div>
-      <div className="stats-row">
-        <StatsCard label="Landed" value={stats.capsules.landed} suffix={<span>/{stats.capsules.attempts}</span>} tone="go" />
-        <StatsCard label="Reflown" value={stats.capsules.reflown} tone="neutral" />
-      </div>
-    </div>
-  )
-}
-
-function BusinessPanel({ stats }: { stats: Stats }) {
-  return (
-    <div className="stats-panel stats-panel--alt">
-      <div className="stats-panel__header">
-        <div>
-          <p className="eyebrow">Business metrics</p>
-          <h3>Revenue, valuation & growth</h3>
-        </div>
-      </div>
-      <div className="business-grid">
-        <div className="business-item">
-          <p className="business-item__label">Revenue (2025 est.)</p>
-          <p className="business-item__value">{stats.business.revenue2025}</p>
-        </div>
-        <div className="business-item">
-          <p className="business-item__label">Valuation (private)</p>
-          <p className="business-item__value">{stats.business.valuation}</p>
-        </div>
-        <div className="business-item">
-          <p className="business-item__label">Employees (est.)</p>
-          <p className="business-item__value">{stats.business.employees}</p>
-        </div>
-        <div className="business-item">
-          <p className="business-item__label">Starlink subscribers (est.)</p>
-          <p className="business-item__value">{stats.business.starlinkSubscribers}</p>
-        </div>
-        <div className="business-item">
-          <p className="business-item__label">Starlink revenue (2024 est.)</p>
-          <p className="business-item__value">{stats.business.starlinkRevenue}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function LastUpdated({ fetchedAt }: { fetchedAt: string }) {
-  const [now, setNow] = useState(Date.now())
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1_000)
-    return () => window.clearInterval(timer)
-  }, [])
-  const elapsed = Math.floor((now - Date.parse(fetchedAt)) / 1_000)
-  const minutes = Math.floor(elapsed / 60)
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-  let text: string
-  if (days > 0) text = `${days}d ago`
-  else if (hours > 0) text = `${hours}h ${minutes % 60}m ago`
-  else if (minutes > 0) text = `${minutes}m ago`
-  else text = 'just now'
-  return (
-    <span className="last-updated" title={new Date(fetchedAt).toLocaleString()}>
-      <i aria-hidden="true" />
-      Updated {text}
-    </span>
-  )
-}
+// ── Main Stats Dashboard ───────────────────────────────────────────────────────
 
 export function StatsDashboard() {
-  const query = useQuery({
+  const stats = useQuery({
     queryKey: ['stats'],
-    queryFn: missionApi.stats,
-    refetchInterval: POLL_INTERVAL_MS,
-    refetchOnWindowFocus: true,
+    queryFn: statsApi.getStats,
+    staleTime: 600_000,
     retry: 1,
-  })
+  });
 
-  if (query.isPending) return <Loading count={2} />
-  if (query.isError) return <ErrorState message={query.error.message} retry={() => query.refetch()} />
-
-  const stats = query.data
+  const data = stats.data ?? FALLBACK_STATS;
+  const cadence = data.launchCadence;
+  const maxYear = Math.max(...data.launchesPerYear.map(d => d.launches));
 
   return (
-    <section className="stats-section" id="stats">
+    <section className="section" id="stats">
       <div className="section-heading">
-        <span className="section-index">04</span>
+        <div className="section-index">05</div>
         <div>
-          <p className="eyebrow">Live stats</p>
-          <h2>SpaceX by the numbers</h2>
-          <p>Dynamically retrieved from spacexnow.com — refreshed every 10 minutes. Displayed values are current as of the last successful scrape; fallback data is used when the source is unavailable.</p>
+          <p className="eyebrow">Statistiques dynamiques</p>
+          <h2>Performance SpaceX</h2>
+          <p>
+            {stats.isPending
+              ? 'Chargement des statistiques…'
+              : stats.isError
+                ? `API unavailable: ${stats.error.message}`
+                : `Données mises à jour depuis l'API The Space Devs. ${cadence.total} lancements au total.`}
+          </p>
         </div>
       </div>
 
-      <div className="stats-grid">
-        <LaunchCadencePanel stats={stats} />
-        <BoosterPanel stats={stats} />
-        <StarlinkStatPanel stats={stats} />
-        <LandingSitesPanel stats={stats} />
-        <DragonsPanel stats={stats} />
-        <CapsulesPanel stats={stats} />
-        <BusinessPanel stats={stats} />
-      </div>
+      {stats.isPending ? (
+        <div className="loading-grid">
+          <div className="loading-card"><i /><i /><i /></div>
+          <div className="loading-card"><i /><i /></div>
+        </div>
+      ) : stats.isError ? (
+        <div className="error-state">
+          <span>!</span>
+          <p>{stats.error.message}</p>
+        </div>
+      ) : (
+        <>
+          {/* ── Animated counters ── */}
+          <div className="stats-counters">
+            <StatCard
+              label="Lancements totaux"
+              value={cadence.total}
+              sublabel="Depuis 2010"
+              color="var(--blue)"
+            />
+            <StatCard
+              label="Taux de réussite"
+              value={cadence.successRate}
+              suffix="%"
+              sublabel={`${cadence.successful} sur ${cadence.total} missions`}
+              color="var(--green)"
+            />
+            <StatCard
+              label="Réussites consécutives"
+              value={cadence.consecutive}
+              sublabel="Record actuel"
+              color="var(--amber)"
+            />
+            <StatCard
+              label="Lancements cette année"
+              value={cadence.thisYear}
+              sublabel={`sur ${new Date().getFullYear()}`}
+              color="#c5a0ff"
+            />
+          </div>
 
-      <div className="stats-footer">
-        <LastUpdated fetchedAt={stats.fetchedAt} />
-        <a
-          className="stats-footer__source"
-          href="https://spacexnow.com/stats"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Source: spacexnow.com/stats <span aria-hidden="true">↗</span>
-        </a>
-        {stats.stale && (
-          <span className="badge badge--warning">Showing cached data</span>
-        )}
-      </div>
+          {/* ── Charts row ── */}
+          <div className="stats-charts">
+            <div className="stat-chart-panel">
+              <p className="panel-label">Lancements par année</p>
+              <BarChart
+                data={data.launchesPerYear}
+                color="var(--blue)"
+                yLabel="Lancements"
+                max={maxYear}
+              />
+            </div>
+            <div className="stat-chart-panel">
+              <p className="panel-label">Sites d'atterrissage · atterissages réussis</p>
+              <LandingSitesChart data={data.landingSites} />
+            </div>
+          </div>
+
+          {/* ── Boosters mini-card ── */}
+          <div className="stats-boosters">
+            <div className="stat-boosters__card">
+              <span className="stat-boosters__label">Boosters actifs</span>
+              <span className="stat-boosters__value" style={{ color: 'var(--green)' }}>
+                {data.boosters.active}
+                <small>/{data.boosters.total} construits</small>
+              </span>
+            </div>
+            <div className="stat-boosters__card">
+              <span className="stat-boosters__label">Taux d'atterrissage</span>
+              <span className="stat-boosters__value" style={{ color: 'var(--amber)' }}>
+                {data.boosters.landingRate}
+                <small>%</small>
+              </span>
+            </div>
+            <div className="stat-boosters__card">
+              <span className="stat-boosters__label">Record de vol</span>
+              <span className="stat-boosters__value" style={{ color: 'var(--blue)' }}>
+                {data.boosters.recordFlights}
+                <small>vol · {data.boosters.recordBooster}</small>
+              </span>
+            </div>
+          </div>
+        </>
+      )}
     </section>
-  )
+  );
 }

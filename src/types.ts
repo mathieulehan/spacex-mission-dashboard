@@ -216,6 +216,10 @@ export type StatsBooster = {
   fastestTurnaroundVandenberg: StatsBoosterFastestTurnaround
   fastestTurnaroundStarbase: StatsBoosterFastestTurnaround
   list: Booster[]
+  active: number
+  total: number
+  recordFlights: number
+  recordBooster: string
 }
 
 export type StatsLandingSite = {

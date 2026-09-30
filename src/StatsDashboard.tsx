@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { statsApi, FALLBACK_STATS } from './api';
-import type { StatsData } from './types';
+import type { Stats } from './types';
 
 // ── Animated counter ──────────────────────────────────────────────────────────
 
@@ -18,6 +18,7 @@ function AnimatedCounter({ value, suffix = '', duration = 1200 }: {
     if (startRef.current !== null) return;
     startRef.current = performance.now();
     const tick = (now: number) => {
+      if (!startRef.current) return;
       const elapsed = now - startRef.current;
       const t = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - t, 3);
@@ -78,7 +79,7 @@ function BarChart({
           />
         ))}
         {/* bars */}
-        {data.map((d) => {
+        {data.map((d: { year: number; launches: number }) => {
           const h = (d.launches / max) * chartHeight;
           const x = padding.left + (100 - padding.left - padding.right) * (d.year - data[0].year) / (data[data.length - 1].year - data[0].year) + (100 - padding.left - padding.right) / data.length * 0.15;
           const w = (100 - padding.left - padding.right) / data.length * 0.7;

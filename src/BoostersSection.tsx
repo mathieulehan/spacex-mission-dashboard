@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
 import { statsApi } from './api';
-import { SectionHeading } from './components/SectionHeading';
-import { Badge } from './components/Badge';
-import { Loading } from './components/Loading';
-import { ErrorState } from './components/ErrorState';
-import type { Booster } from './types';
+import { SectionHeading } from './components';
+import { Badge } from './components';
+import { Loading } from './components';
+import { ErrorState } from './components';
+import type { Booster, StatsBooster } from './types';  // import Booster, StatsBooster
 
 // ── Sorting helpers ────────────────────────────────────────────────────────────
 
@@ -146,7 +146,7 @@ export function BoostersSection() {
   });
 
   const stats = data;
-  const boosters = stats?.boosters?.list ?? [];
+  const boosters = stats?.boosters?.list ?? []  // StatsBooster.list existe;
 
   if (isLoading) return <Loading />;
   if (error && !stats) return <ErrorState message="Impossible de charger les données des boosters." retry={() => statsApi.getStats()} />;
@@ -169,7 +169,7 @@ export function BoostersSection() {
 
       {/* Global landing rate */}
       <div className="boosters-hero-row">
-        <GlobalLandingRate rate={globalRate} total={totalAttempts} landed={boosters.reduce((s, b) => s + b.landed, 0)} />
+        <GlobalLandingRate rate={globalRate} total={totalAttempts} landed={boosters.reduce((s: number, b: { landed: number }) => s + b.landed, 0)} />
         {recordFlights > 0 && (
           <div className="boosters-record">
             <span className="boosters-record__label">Record de vol</span>

@@ -328,3 +328,6 @@ export type CacheStatus = {
   }>
   missionDetailsStored: number
 }
+
+
+export type StatsData = Stats

@@ -176,34 +176,6 @@ const FALLBACK_DATA = {
     source: 'api.spacexdata.com/v4/company + S-1 SEC filing (juin 2026)',
     lastUpdated: new Date().toISOString().split('T')[0],
   },
-
-  'next-launches': {
-    data: [
-      {
-        flight_number: 123,
-        mission_name: 'Starlink Group 15-27',
-        net: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
-        rocket: 'Falcon 9',
-        launch_site: 'CCSFS SLC-40',
-      },
-      {
-        flight_number: 124,
-        mission_name: 'CRS-32 Cargo Resupply Mission',
-        net: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
-        rocket: 'Falcon 9',
-        launch_site: 'CCSFS SLC-40',
-      },
-      {
-        flight_number: 125,
-        mission_name: 'Starship Integrated Flight Test 9',
-        net: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
-        rocket: 'Starship',
-        launch_site: 'Starbase, Texas',
-      },
-    ],
-    source: 'LL2 API v2.2.0 — https://ll.thespacedevs.com/2.2.0/launch/upcoming/',
-    fetchedAt: new Date().toISOString(),
-  },
 };
 
 // ── Route table ──────────────────────────────────────────────────────────────
@@ -219,7 +191,6 @@ const ROUTES = [
   { method: 'GET', path: '/api/ll2/landings', ttl: 60 * 60 * 1000 },
   { method: 'GET', path: '/api/launch-stats', ttl: 24 * 3600 * 1000 },
   { method: 'GET', path: '/api/spacex-company', ttl: 7 * 24 * 3600 * 1000 },
-  { method: 'GET', path: '/api/next-launches', ttl: 60 * 60 * 1000 },
   { method: 'GET', path: '/api/health', ttl: null },
 ];
 

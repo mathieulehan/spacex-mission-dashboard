@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type {
-  StatsData,
+  Stats,
   Launches,
   LaunchDetail,
   Events,
@@ -17,7 +17,7 @@ async function get<T>(path: string): Promise<T> {
 }
 
 export const statsApi = {
-  getStats: () => get<StatsData>('/stats'),
+  getStats: () => get<Stats>('/stats'),
 };
 
 // ── Mission API ───────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ export const missionApi = {
 
 // ── Fallback stats (used when API is unreachable) ────────────────────────────
 
-export const FALLBACK_STATS: StatsData = {
+export const FALLBACK_STATS: Stats = {
   fetchedAt: new Date().toISOString(),
   stale: true,
   source: 'fallback',

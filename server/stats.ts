@@ -94,16 +94,16 @@ export const SPACEXNOW_BOOTSTRAP: SpaceXNowStats = {
       mission: 'Jupiter 3 / EchoStar-24',
     },
   },
-  landingSites: {
-    LZ1: { landed: 53, attempts: 54, rate: 98.15 },
-    LZ2: { landed: 19, attempts: 19, rate: 100 },
-    LZ4: { landed: 35, attempts: 35, rate: 100 },
-    LZ40: { landed: 6, attempts: 6, rate: 100 },
-    ASOG: { landed: 167, attempts: 168, rate: 99.4 },
-    JRTI: { landed: 156, attempts: 159, rate: 98.11 },
-    OCISLY: { landed: 227, attempts: 235, rate: 96.6 },
-    Catch: { landed: 3, attempts: 4, rate: 75 },
-  },
+  landingSites: [
+    { site: 'LZ1', landed: 53, attempts: 54, rate: 98.15 },
+    { site: 'LZ2', landed: 19, attempts: 19, rate: 100 },
+    { site: 'LZ4', landed: 35, attempts: 35, rate: 100 },
+    { site: 'LZ40', landed: 6, attempts: 6, rate: 100 },
+    { site: 'ASOG', landed: 167, attempts: 168, rate: 99.4 },
+    { site: 'JRTI', landed: 156, attempts: 159, rate: 98.11 },
+    { site: 'OCISLY', landed: 227, attempts: 235, rate: 96.6 },
+    { site: 'Catch', landed: 3, attempts: 4, rate: 75 },
+  ],
   dragons: {
     cargoMissions: 36,
     crewMissions: 19,
@@ -178,16 +178,7 @@ export type LandingSiteStats = {
   rate: number
 }
 
-export type LandingSitesStats = {
-  LZ1: LandingSiteStats
-  LZ2: LandingSiteStats
-  LZ4: LandingSiteStats
-  LZ40: LandingSiteStats
-  ASOG: LandingSiteStats
-  JRTI: LandingSiteStats
-  OCISLY: LandingSiteStats
-  Catch: LandingSiteStats
-}
+export type LandingSitesStats = Array<LandingSiteStats & { site: string }>
 
 export type DragonStats = {
   cargoMissions: number
@@ -509,16 +500,16 @@ async function scrapeSpacexnowStats(
           mission: 'Jupiter 3 / EchoStar-24',
         },
       },
-      landingSites: {
-        LZ1: { landed: 53, attempts: 54, rate: 98.15 },
-        LZ2: { landed: 19, attempts: 19, rate: 100 },
-        LZ4: { landed: 35, attempts: 35, rate: 100 },
-        LZ40: { landed: 6, attempts: 6, rate: 100 },
-        ASOG: { landed: 167, attempts: 168, rate: 99.4 },
-        JRTI: { landed: 156, attempts: 159, rate: 98.11 },
-        OCISLY: { landed: 227, attempts: 235, rate: 96.6 },
-        Catch: { landed: 3, attempts: 4, rate: 75 },
-      },
+      landingSites: [
+        { site: 'LZ1', landed: 53, attempts: 54, rate: 98.15 },
+        { site: 'LZ2', landed: 19, attempts: 19, rate: 100 },
+        { site: 'LZ4', landed: 35, attempts: 35, rate: 100 },
+        { site: 'LZ40', landed: 6, attempts: 6, rate: 100 },
+        { site: 'ASOG', landed: 167, attempts: 168, rate: 99.4 },
+        { site: 'JRTI', landed: 156, attempts: 159, rate: 98.11 },
+        { site: 'OCISLY', landed: 227, attempts: 235, rate: 96.6 },
+        { site: 'Catch', landed: 3, attempts: 4, rate: 75 },
+      ],
       dragons: {
         cargoMissions: 36,
         crewMissions: 19,
@@ -625,22 +616,14 @@ export class StatsService {
 
 import { z } from 'zod'
 
-const landingSiteSchema = z.object({
-  landed: z.number(),
-  attempts: z.number(),
-  rate: z.number(),
-})
-
-const landingSitesSchema = z.object({
-  LZ1: landingSiteSchema,
-  LZ2: landingSiteSchema,
-  LZ4: landingSiteSchema,
-  LZ40: landingSiteSchema,
-  ASOG: landingSiteSchema,
-  JRTI: landingSiteSchema,
-  OCISLY: landingSiteSchema,
-  Catch: landingSiteSchema,
-})
+const landingSitesSchema = z.array(
+  z.object({
+    site: z.string(),
+    landed: z.number(),
+    attempts: z.number(),
+    rate: z.number(),
+  }),
+)
 
 const launchPerYearSchema = z.object({
   year: z.number(),

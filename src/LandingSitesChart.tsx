@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, type ReactNode } from 'react'
 import * as echarts from 'echarts/core'
 import { BarChart } from 'echarts/charts'
 import {
@@ -8,7 +8,7 @@ import {
   VisualMapComponent,
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
-import type { StatsLandingSites } from './types'
+import type { StatsLandingSite } from './types'
 
 echarts.use([
   BarChart,
@@ -19,24 +19,19 @@ echarts.use([
   CanvasRenderer,
 ])
 
-function LandingSitesChart({ sites }: { sites: StatsLandingSites }) {
+function LandingSitesChart({ sites }: { sites: StatsLandingSite[] }) {
   const chartRef = useRef<HTMLDivElement>(null)
   const instanceRef = useRef<echarts.ECharts | null>(null)
 
   useEffect(() => {
     if (!chartRef.current) return
 
-    const siteNames = ['LZ-1', 'LZ-2', 'LZ-4', 'LZ-40', 'ASOG', 'JRTI', 'OCISLY', 'Mechazilla']
-    const siteData: Array<{ name: string; landed: number; attempts: number; rate: number }> = [
-      { name: 'LZ-1', landed: sites.LZ1.landed, attempts: sites.LZ1.attempts, rate: sites.LZ1.rate },
-      { name: 'LZ-2', landed: sites.LZ2.landed, attempts: sites.LZ2.attempts, rate: sites.LZ2.rate },
-      { name: 'LZ-4', landed: sites.LZ4.landed, attempts: sites.LZ4.attempts, rate: sites.LZ4.rate },
-      { name: 'LZ-40', landed: sites.LZ40.landed, attempts: sites.LZ40.attempts, rate: sites.LZ40.rate },
-      { name: 'ASOG', landed: sites.ASOG.landed, attempts: sites.ASOG.attempts, rate: sites.ASOG.rate },
-      { name: 'JRTI', landed: sites.JRTI.landed, attempts: sites.JRTI.attempts, rate: sites.JRTI.rate },
-      { name: 'OCISLY', landed: sites.OCISLY.landed, attempts: sites.OCISLY.attempts, rate: sites.OCISLY.rate },
-      { name: 'Mechazilla', landed: sites.Catch.landed, attempts: sites.Catch.attempts, rate: sites.Catch.rate },
-    ].sort((a, b) => a.name.localeCompare(b.name))
+    const siteData: Array<{ name: string; landed: number; attempts: number; rate: number }> = sites.map(s => ({
+      name: s.site,
+      landed: s.landings,
+      attempts: Math.round(s.landings / (s.rate / 100) || 0),
+      rate: s.rate,
+    })).sort((a, b) => a.name.localeCompare(b.name))
 
     const colors = siteData.map((d) =>
       d.rate >= 99

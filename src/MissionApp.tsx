@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Countdown, ErrorState, ExternalLink, Loading, SectionHeading } from './components'
 import { StatsDashboard } from './StatsDashboard'
-import { NextLaunchesSection } from './NextLaunches'
 import { missionApi } from './api'
 import { launchCalendarHref } from './calendar'
 import type { Launch, LaunchDetail, SpaceEvent, StarlinkSummary, Stats } from './types'
@@ -359,31 +358,16 @@ function MissionDetailContent({ detail }: { detail: LaunchDetail }) {
   )
 }
 
-function MissionDetailPanel({
-  launch,
-  onClose,
-}: {
-  launch: Launch
-  onClose: () => void
-}) {
-  const detail = useQuery({
-    queryKey: ['launch', launch.id],
-    queryFn: () => missionApi.launch(launch.id),
-    staleTime: 600_000,
-    retry: 1,
-  })
+function MissionDetailPanel({ launch, onClose }: { launch: Launch; onClose: () => void }) {
+  const detail = useQuery({ queryKey: ['launch', launch.id], queryFn: () => missionApi.launch(launch.id), staleTime: 600_000, retry: 1 })
+  const labelledById = detail.isPending || detail.isError ? 'mission-summary-title' : 'mission-detail-title'
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.body.style.overflow = previousOverflow
-      window.removeEventListener('keydown', onKeyDown)
-    }
+    return () => { document.body.style.overflow = previousOverflow; window.removeEventListener('keydown', onKeyDown) }
   }, [onClose])
 
   return (
@@ -392,7 +376,7 @@ function MissionDetailPanel({
         className="detail-panel"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="mission-detail-title"
+        aria-labelledby={labelledById}
         onMouseDown={(event) => event.stopPropagation()}
       >
         <button className="detail-close" type="button" onClick={onClose} aria-label="Close mission details">×</button>
@@ -427,7 +411,7 @@ function MissionSummary({ launch }: { launch: Launch }) {
             <Badge>{launch.precision.name} precision</Badge>
           </div>
           <p className="eyebrow">{launch.rocket} / {launch.orbit ?? 'Orbit pending'}</p>
-          <h2 id="mission-detail-title">{launch.missionName ?? launch.name}</h2>
+          <h2 id="mission-summary-title">{launch.missionName ?? launch.name}</h2>
           <p>{launch.missionDescription ?? launch.status.description}</p>
         </div>
       </div>
@@ -802,10 +786,10 @@ export default function MissionApp() {
     <div className="app">
       <header className="header">
         <a className="brand" href="#top"><strong>SPACEX</strong><span>MISSION DATA</span></a>
-        <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a><a href="#next-launches">Next</a><a href="#stats">Stats</a><a href="#data-status">Data status</a></nav>
+        <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a><a href="#stats">Stats</a><a href="#data-status">Data status</a></nav>
         <div className="source-state"><i /> LL2 + SPACE-TRACK</div>
       </header>
-      <main><LaunchesSection /><EventsSection /><StarlinkSection /><NextLaunchesSection /><StatsDashboard /><CacheStatusSection /></main>
+      <main><LaunchesSection /><EventsSection /><StarlinkSection /><StatsDashboard /><CacheStatusSection /></main>
       <footer>
         <div className="brand"><strong>SPACEX</strong><span>COMMUNITY DATA</span></div>
         <p>Launch data by The Space Devs. Orbital elements by Space-Track.org. Not affiliated with SpaceX.</p>

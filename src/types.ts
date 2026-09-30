@@ -181,6 +181,10 @@ export type StatsLaunchCadence = {
   launchesPerYear: LaunchPerYear[]
   mostLaunchesInYear: LaunchPerYear
   launchGoal2026: { planned: number; completed: number; rate: number }
+  total: number
+  successful: number
+  consecutive: number
+  thisYear: number
 }
 
 export type StatsBoosterFastestTurnaround = {
@@ -188,6 +192,17 @@ export type StatsBoosterFastestTurnaround = {
   booster?: string
   firstFlight: string
   secondFlight: string
+}
+
+export type Booster = {
+  serialNumber: string
+  type: string
+  flights: number
+  landed: number
+  attempted: number
+  landingRate: number
+  status: 'active' | 'retired' | 'lost'
+  lastFlight: string
 }
 
 export type StatsBooster = {
@@ -204,24 +219,20 @@ export type StatsBooster = {
   fastestTurnaroundCapeCanaveral: StatsBoosterFastestTurnaround
   fastestTurnaroundVandenberg: StatsBoosterFastestTurnaround
   fastestTurnaroundStarbase: StatsBoosterFastestTurnaround
+  list: Booster[]
+  active: number
+  total: number
+  recordFlights: number
+  recordBooster: string
 }
 
 export type StatsLandingSite = {
-  landed: number
-  attempts: number
+  site: string
+  landings: number
   rate: number
 }
 
-export type StatsLandingSites = {
-  LZ1: StatsLandingSite
-  LZ2: StatsLandingSite
-  LZ4: StatsLandingSite
-  LZ40: StatsLandingSite
-  ASOG: StatsLandingSite
-  JRTI: StatsLandingSite
-  OCISLY: StatsLandingSite
-  Catch: StatsLandingSite
-}
+export type StatsLandingSites = Array<StatsLandingSite>
 
 export type StatsStarlink = {
   inOrbit: number
@@ -236,6 +247,7 @@ export type StatsDragon = {
   cargoMissions: number
   crewMissions: number
   testMissions: number
+  totalMissions: number
   issCargoUp: string
   issCargoDown: string
   reflights: number
@@ -269,6 +281,7 @@ export type Stats = {
   dragons: StatsDragon
   capsules: StatsCapsule
   business: StatsBusiness
+  launchesPerYear?: Array<{ year: number; launches: number }>
   starlinkSubscribers?: number | null
   launchesThisYear?: number | null
   launchesThisYearGoal?: number | null
@@ -312,3 +325,6 @@ export type CacheStatus = {
   }>
   missionDetailsStored: number
 }
+
+
+export type StatsData = Stats

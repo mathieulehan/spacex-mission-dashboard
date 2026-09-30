@@ -288,7 +288,7 @@ export function StatsDashboard() {
             <div className="stat-chart-panel">
               <p className="panel-label">Lancements par année</p>
               <BarChart
-                data={cadence.launchesPerYear ?? []}
+                data={(cadence.launchesPerYear ?? []).map(d => ({ year: d.year, launches: d.completed ?? d.planned ?? 0 }))}
                 color="var(--blue)"
                 yLabel="Lancements"
                 max={maxYear}

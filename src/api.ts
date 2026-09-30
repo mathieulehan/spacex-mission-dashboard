@@ -107,10 +107,6 @@ export const FALLBACK_STATS: Stats = {
       firstFlight: '2024-03-14T00:00:00Z',
       secondFlight: '2024-04-10T00:00:00Z',
     },
-    active: 18,
-    total: 20,
-    recordFlights: 27,
-    recordBooster: 'B1067',
     list: [
       { serialNumber: 'B1067', type: 'Falcon 9 Block 5', flights: 27, landed: 27, attempted: 27, landingRate: 100, status: 'active', lastFlight: '2026-08-15' },
       { serialNumber: 'B1080', type: 'Falcon 9 Block 5', flights: 22, landed: 22, attempted: 22, landingRate: 100, status: 'active', lastFlight: '2026-08-20' },

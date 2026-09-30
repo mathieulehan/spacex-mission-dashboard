@@ -223,7 +223,7 @@ export function StatsDashboard() {
 
   const data = stats.data ?? FALLBACK_STATS;
   const cadence = data.launchCadence;
-  const maxYear = Math.max(...data.launchesPerYear.map(d => d.launches));
+  const maxYear = Math.max(...(cadence.launchesPerYear ?? []).map((d: { year: number; planned?: number; completed?: number; rate?: number }) => d.completed ?? d.planned ?? 0));
 
   return (
     <section className="section" id="stats">
@@ -288,7 +288,7 @@ export function StatsDashboard() {
             <div className="stat-chart-panel">
               <p className="panel-label">Lancements par année</p>
               <BarChart
-                data={data.launchesPerYear}
+                data={cadence.launchesPerYear ?? []}
                 color="var(--blue)"
                 yLabel="Lancements"
                 max={maxYear}

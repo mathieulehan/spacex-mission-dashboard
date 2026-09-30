@@ -181,6 +181,10 @@ export type StatsLaunchCadence = {
   launchesPerYear: LaunchPerYear[]
   mostLaunchesInYear: LaunchPerYear
   launchGoal2026: { planned: number; completed: number; rate: number }
+  total: number
+  successful: number
+  consecutive: number
+  thisYear: number
 }
 
 export type StatsBoosterFastestTurnaround = {
@@ -223,21 +227,12 @@ export type StatsBooster = {
 }
 
 export type StatsLandingSite = {
-  landed: number
-  attempts: number
+  site: string
+  landings: number
   rate: number
 }
 
-export type StatsLandingSites = {
-  LZ1: StatsLandingSite
-  LZ2: StatsLandingSite
-  LZ4: StatsLandingSite
-  LZ40: StatsLandingSite
-  ASOG: StatsLandingSite
-  JRTI: StatsLandingSite
-  OCISLY: StatsLandingSite
-  Catch: StatsLandingSite
-}
+export type StatsLandingSites = Array<StatsLandingSite>
 
 export type StatsStarlink = {
   inOrbit: number
@@ -252,6 +247,7 @@ export type StatsDragon = {
   cargoMissions: number
   crewMissions: number
   testMissions: number
+  totalMissions: number
   issCargoUp: string
   issCargoDown: string
   reflights: number
@@ -285,6 +281,7 @@ export type Stats = {
   dragons: StatsDragon
   capsules: StatsCapsule
   business: StatsBusiness
+  launchesPerYear?: Array<{ year: number; launches: number }>
   starlinkSubscribers?: number | null
   launchesThisYear?: number | null
   launchesThisYearGoal?: number | null

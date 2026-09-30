@@ -190,6 +190,17 @@ export type StatsBoosterFastestTurnaround = {
   secondFlight: string
 }
 
+export type Booster = {
+  serialNumber: string
+  type: string
+  flights: number
+  landed: number
+  attempted: number
+  landingRate: number
+  status: 'active' | 'retired' | 'lost'
+  lastFlight: string
+}
+
 export type StatsBooster = {
   totalLanded: number
   totalAttempts: number
@@ -204,6 +215,7 @@ export type StatsBooster = {
   fastestTurnaroundCapeCanaveral: StatsBoosterFastestTurnaround
   fastestTurnaroundVandenberg: StatsBoosterFastestTurnaround
   fastestTurnaroundStarbase: StatsBoosterFastestTurnaround
+  list: Booster[]
 }
 
 export type StatsLandingSite = {

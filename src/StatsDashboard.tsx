@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { statsApi, FALLBACK_STATS } from './api';
-import type { Stats } from './types';
+import type { Stats, StatsLandingSite } from './types';
 
 // ── Animated counter ──────────────────────────────────────────────────────────
 
@@ -223,6 +223,14 @@ export function StatsDashboard() {
 
   const data = stats.data ?? FALLBACK_STATS;
   const cadence = data.launchCadence;
+  // server may return landingSites as { LZ1: {...}, LZ2: {...} } or as [{ site, landed, attempts, rate }];
+  // normalize to the array shape LandingSitesChart expects
+  const landingSites: Array<{ site: string; landings: number; rate: number }> =
+    Array.isArray(data.landingSites)
+      ? data.landingSites.map((s: StatsLandingSite) => ({ site: s.site, landings: s.landings, rate: s.rate }))
+      : Object.entries(data.landingSites as Record<string, { landed: number; attempts: number; rate: number }>).map(
+          ([site, s]) => ({ site, landings: s.landed, rate: s.rate }),
+        );
   const maxYear = Math.max(...(cadence.launchesPerYear ?? []).map((d: { year: number; planned?: number; completed?: number; rate?: number }) => d.completed ?? d.planned ?? 0));
 
   return (
@@ -296,7 +304,7 @@ export function StatsDashboard() {
             </div>
             <div className="stat-chart-panel">
               <p className="panel-label">Sites d'atterrissage · atterissages réussis</p>
-              <LandingSitesChart data={data.landingSites} />
+              <LandingSitesChart data={landingSites} />
             </div>
           </div>
 

@@ -33,7 +33,7 @@ function sortBoosters(boosters: Booster[], key: SortKey, dir: SortDir): Booster[
 function LandingRateBadge({ rate }: { rate: number }) {
   if (rate >= 95) return <Badge tone="go">{rate.toFixed(1)}%</Badge>;
   if (rate >= 85) return <Badge tone="warning">{rate.toFixed(1)}%</Badge>;
-  return <Badge tone="warning">{rate.toFixed(1)}%</Badge>;
+  return <Badge tone="risk">{rate.toFixed(1)}%</Badge>;
 }
 
 // ── Global landing rate hero ───────────────────────────────────────────────────
@@ -138,7 +138,7 @@ function BoostersTable({ boosters }: { boosters: Booster[] }) {
 // ── Boosters Section ───────────────────────────────────────────────────────────
 
 export function BoostersSection() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['stats'],
     queryFn: () => statsApi.getStats(),
     staleTime: 60_000,
@@ -149,7 +149,7 @@ export function BoostersSection() {
   const boosters = stats?.boosters?.list ?? []  // StatsBooster.list existe;
 
   if (isLoading) return <Loading />;
-  if (error && !stats) return <ErrorState message="Impossible de charger les données des boosters." retry={() => statsApi.getStats()} />;
+  if (error && !stats) return <ErrorState message="Impossible de charger les données des boosters." retry={refetch} />;
   if (!boosters.length) return <div className="empty">Aucune donnée de booster disponible.</div>;
 
   const globalRate = stats?.boosters?.landingRate ?? 0;
@@ -161,9 +161,9 @@ export function BoostersSection() {
   const recordBooster = stats?.boosters?.recordBooster ?? '';
 
   return (
-    <section className="section">
+    <section className="section" id="boosters">
       <SectionHeading
-        index="05"
+        index="06"
         eyebrow="Fusées réutilisables"
         title="Boosters"
         description={`${boosters.length} boosters trackés · ${activeCount} actifs · ${totalAttempts} essais d'atterrissage`}

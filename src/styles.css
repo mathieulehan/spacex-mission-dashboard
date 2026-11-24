@@ -152,6 +152,11 @@ nav a:hover, footer > a:hover { color: white; }
   border-color: rgba(255,199,102,.32);
   background: rgba(255,199,102,.08);
 }
+.badge--risk {
+  color: #ff7b7b;
+  border-color: rgba(227,73,73,.38);
+  background: rgba(227,73,73,.10);
+}
 .badge--live {
   color: white;
   border-color: #e34949;
@@ -1008,12 +1013,56 @@ footer {
 footer p { color: var(--muted); font-size: .7rem; line-height: 1.6; text-align: center; }
 footer > a { justify-self: end; }
 
+/* Mobile bottom navigation — mounted always, visible only under 950px. */
+.mobile-nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 40;
+  box-sizing: border-box;
+  width: 100%;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(10, 15, 22, .96);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, .45);
+  backdrop-filter: blur(10px);
+}
+.mobile-nav__list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mobile-nav__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 56px; /* ≥ 44px touch target */
+  padding: 6px 4px;
+  color: var(--muted);
+  font-size: .66rem;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+}
+.mobile-nav__icon { width: 22px; height: 22px; flex: none; }
+.mobile-nav__link:hover { color: #fff; }
+.mobile-nav__link[aria-current='page'] { color: var(--blue); }
+.mobile-nav__link:focus-visible { outline-offset: -3px; }
+
+@media (min-width: 951px) {
+  .mobile-nav { display: none; }
+}
+
 @keyframes shimmer { to { background-position: -200% 0; } }
 
 @media (max-width: 950px) {
   .header { grid-template-columns: 1fr auto; }
-  .header nav { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 16px; padding-bottom: 4px; width: 100%; }
-  .header nav a { white-space: nowrap; font-size: .72rem; }
+  .header nav { display: none; }
+  .app { padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-nav { display: block; }
   .mission-hero { grid-template-columns: 1fr; }
   .mission-hero__image { height: 350px; }
   .mission-hero__shade { background: linear-gradient(0deg, var(--panel), transparent 70%); }
@@ -1413,5 +1462,219 @@ footer > a { justify-self: end; }
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
+  }
+}
+
+/* ── Boosters Section ─────────────────────────────────────────────────────────── */
+
+.boosters-hero-row {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.boosters-global-rate {
+  flex: 1;
+  min-width: 200px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.boosters-global-rate__number {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.boosters-global-rate__value {
+  font: 2.2rem 'Space Mono', monospace;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+}
+
+.boosters-global-rate__label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.boosters-global-rate__details {
+  display: flex;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+}
+
+.boosters-record {
+  flex: 0 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+}
+
+.boosters-record__label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.boosters-record__value {
+  font: 1.6rem 'Space Mono', monospace;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+.boosters-record__sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* ── Boosters Table ───────────────────────────────────────────────────────────── */
+
+.boosters-table-wrap {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.boosters-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 520px;
+}
+
+.boosters-table thead {
+  background: var(--panel-light);
+  border-bottom: 1px solid var(--line);
+}
+
+.boosters-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.th-sortable:hover {
+  background: rgba(255,255,255,0.03);
+  color: white;
+}
+
+.th-sort-arrow {
+  margin-left: 6px;
+  opacity: 0.6;
+}
+
+.th--asc .th-sort-arrow,
+.th--desc .th-sort-arrow {
+  opacity: 1;
+  color: var(--blue);
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.boosters-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  color: #d5dde8;
+  vertical-align: middle;
+}
+
+.boosters-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.boosters-table tbody tr:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.td-serial {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.booster-serial {
+  font: 0.78rem 'Space Mono', monospace;
+  color: white;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.booster-type {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+.landing-stats {
+  font: 0.78rem 'Space Mono', monospace;
+  color: white;
+}
+
+.landing-divider {
+  color: var(--muted);
+  margin: 0 2px;
+}
+
+.td-last-flight {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ── Boosters responsive ──────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .boosters-hero-row {
+    flex-direction: column;
+  }
+
+  .boosters-global-rate,
+  .boosters-record {
+    width: 100%;
+  }
+
+  .boosters-table th,
+  .boosters-table td {
+    padding: 10px 12px;
+    font-size: 0.78rem;
+  }
+
+  .boosters-table {
+    min-width: 440px;
   }
 }

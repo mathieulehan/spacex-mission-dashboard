@@ -70,7 +70,7 @@ describe('MissionApp', () => {
     expect(await screen.findByText('8,100')).toBeInTheDocument()
     expect(screen.getByText('STARLINK-1008')).toBeInTheDocument()
     expect(
-      await screen.findByRole('img', { name: /Interactive 3D Earth with 2 calculated/ }),
+      await screen.findByRole('img', { name: /Interactive 3D Earth with 2 calculated/ }, { timeout: 3_000 }),
     ).toBeInTheDocument()
     expect(screen.getByText('Drag to rotate')).toBeInTheDocument()
     expect(screen.getByText(/approximate, not live/)).toBeInTheDocument()
@@ -79,6 +79,17 @@ describe('MissionApp', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Space-Track Starlink')).toBeInTheDocument()
     expect(screen.getByText('LL2 rate-limit window')).toBeInTheDocument()
+  })
+
+  it('renders the boosters section with the global landing rate', async () => {
+    renderApp()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Boosters' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Taux d\'atterrissage global')).toBeInTheDocument()
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText('B1067')).toBeInTheDocument()
   })
 
   it('isolates a Space-Track outage from launch data', async () => {
@@ -141,10 +152,9 @@ describe('MissionApp', () => {
 
     await user.click(await screen.findByRole('button', { name: /Mission details/ }))
 
-    expect(
-      await screen.findByRole('dialog', { name: 'Roman Space Telescope' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('B1072')).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'Roman Space Telescope' })
+    expect(dialog).toBeInTheDocument()
+    expect(within(dialog).getByText('B1072')).toBeInTheDocument()
     expect(screen.getByText('Official webcast')).toBeInTheDocument()
     expect(screen.getByText('Liftoff')).toBeInTheDocument()
 

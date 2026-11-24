@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Badge, Countdown, ErrorState, ExternalLink, Loading, SectionHeading } from './components'
 import { StatsDashboard } from './StatsDashboard'
 import MobileNav from './MobileNav'
+import { BoostersSection } from './BoostersSection'
 import { missionApi } from './api'
 import { launchCalendarHref } from './calendar'
 import type { Launch, LaunchDetail, SpaceEvent, StarlinkSummary, Stats } from './types'
@@ -790,7 +791,7 @@ export default function MissionApp() {
         <nav><a href="#manifest">Manifest</a><a href="#events">Events</a><a href="#starlink">Starlink</a><a href="#stats">Stats</a><a href="#data-status">Data status</a></nav>
         <div className="source-state"><i /> LL2 + SPACE-TRACK</div>
       </header>
-      <main><LaunchesSection /><EventsSection /><StarlinkSection /><StatsDashboard /><CacheStatusSection /></main>
+      <main><LaunchesSection /><EventsSection /><StarlinkSection /><StatsDashboard /><BoostersSection /><CacheStatusSection /></main>
       <MobileNav />
       <footer>
         <div className="brand"><strong>SPACEX</strong><span>COMMUNITY DATA</span></div>

@@ -82,6 +82,25 @@ describe('MissionApp', () => {
   })
 
   it('renders the boosters section with the global landing rate', async () => {
+    // La source spacexnow ne publie pas de fiche par booster : le roster est
+    // fourni localement par le test, dérivé du record du snapshot canonique.
+    const record = FALLBACK_STATS.boosters;
+    vi.mocked(statsApi.getStats).mockResolvedValue({
+      ...FALLBACK_STATS,
+      boosters: {
+        ...record,
+        list: [{
+          serialNumber: record.recordBooster,
+          type: 'Falcon 9 Block 5',
+          flights: record.recordFlights,
+          landed: record.recordFlights,
+          attempted: record.recordFlights,
+          landingRate: 100,
+          status: 'active',
+          lastFlight: FALLBACK_STATS.fetchedAt.slice(0, 10),
+        }],
+      },
+    });
     renderApp()
 
     expect(

@@ -1,45 +1,19 @@
 import type { CacheStore } from './cache-store.js'
 import { UpstreamError } from './upstream.js'
+import {
+  SPACEXNOW_BOOTSTRAP,
+  SPACEXNOW_BOOTSTRAP_FETCHED_AT,
+  type BoosterStats,
+} from './stats-snapshot.js'
 
 const LL2_BASE_URL = 'https://ll.thespacedevs.com/2.2.0'
 const LL2_LANDINGS_CACHE_TTL = 60 * 60 * 1_000 // 1 heure
 
-// Données de bootstrap (valeurs connues, utilisées si LL2 inaccessible).
-// Snapshot daté du 2026-09-20 : jamais présenté comme une valeur live par
-// StatsService, qui ignore ce retour obsolète quand le scrape spacexnow réussit.
-const LL2_BOOTSTRAP_FETCHED_AT = '2026-09-20T12:00:00.000Z'
-const LL2_BOOTSTRAP_BOOSTERS = {
-  totalLanded: 663,
-  totalAttempts: 686,
-  landingRate: 96.65,
-  mostFlights: { booster: 'B1067', flights: 37 },
-  reflown: 625,
-  block5Landed: 639,
-  block5Attempts: 645,
-  block5Rate: 99.07,
-  block5Reflown: 611,
-  fastestTurnaround: {
-    duration: '9 days, 3 hours',
-    booster: 'B1088',
-    firstFlight: 'SPHEREx & PUNCH (Mar 12 2025)',
-    secondFlight: 'NROL-57 (Mar 21 2025)',
-  },
-  fastestTurnaroundCapeCanaveral: {
-    duration: '1 day, 21 hours',
-    firstFlight: 'Starlink Group 6-97 (Jan 12 2026)',
-    secondFlight: 'Starlink Group 6-98 (Jan 14 2026)',
-  },
-  fastestTurnaroundVandenberg: {
-    duration: '2 days, 7 hours',
-    firstFlight: 'NROL-179 (Jun 19 2026)',
-    secondFlight: 'Starlink Group 17-28 (Jun 21 2026)',
-  },
-  fastestTurnaroundStarbase: {
-    duration: '1 month, 7 days',
-    firstFlight: 'Starship Flight 5 (Oct 13 2024)',
-    secondFlight: 'Starship Flight 6 (Nov 19 2024)',
-  },
-}
+// UNIQUE snapshot de secours des boosters : partagé avec /api/stats.
+// Jamais présenté comme live par StatsService, qui ignore ce retour obsolète
+// quand le scrape spacexnow réussit.
+const LL2_BOOTSTRAP_FETCHED_AT = SPACEXNOW_BOOTSTRAP_FETCHED_AT
+const LL2_BOOTSTRAP_BOOSTERS: BoosterStats = SPACEXNOW_BOOTSTRAP.boosters
 
 export class LL2BoosterService {
   private cache: CacheStore
@@ -169,7 +143,7 @@ export class LL2BoosterService {
     // Fastest turnaround
     let minDays = Infinity
     let fastestBooster = ''
-    let fastestTurnaround = LL2_BOOTSTRAP_BOOSTERS.fastestTurnaround
+    let fastestBoosterTurnaround = LL2_BOOTSTRAP_BOOSTERS.fastestBoosterTurnaround
 
     for (const [serial, data] of boosterFlights) {
       for (const days of data.turnarounds) {
@@ -183,7 +157,7 @@ export class LL2BoosterService {
     if (minDays !== Infinity) {
       const days = Math.floor(minDays)
       const hours = Math.round((minDays - days) * 24)
-      fastestTurnaround = {
+      fastestBoosterTurnaround = {
         duration: hours > 0 ? `${days} days, ${hours} hours` : `${days} days`,
         booster: fastestBooster,
         firstFlight: 'voir LL2 pour les détails',
@@ -201,10 +175,11 @@ export class LL2BoosterService {
       block5Attempts,
       block5Rate,
       block5Reflown,
-      fastestTurnaround,
-      fastestTurnaroundCapeCanaveral: LL2_BOOTSTRAP_BOOSTERS.fastestTurnaroundCapeCanaveral,
-      fastestTurnaroundVandenberg: LL2_BOOTSTRAP_BOOSTERS.fastestTurnaroundVandenberg,
-      fastestTurnaroundStarbase: LL2_BOOTSTRAP_BOOSTERS.fastestTurnaroundStarbase,
+      fastestBoosterTurnaround,
+      fastestPadTurnaround: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaround,
+      fastestPadTurnaroundCapeCanaveral: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaroundCapeCanaveral,
+      fastestPadTurnaroundVandenberg: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaroundVandenberg,
+      fastestPadTurnaroundStarbase: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaroundStarbase,
     }
   }
 
@@ -235,38 +210,8 @@ export class LL2BoosterService {
   }
 }
 
-export type LL2BoosterStats = {
-  totalLanded: number
-  totalAttempts: number
-  landingRate: number
-  mostFlights: { booster: string; flights: number }
-  reflown: number
-  block5Landed: number
-  block5Attempts: number
-  block5Rate: number
-  block5Reflown: number
-  fastestTurnaround: {
-    duration: string
-    booster?: string
-    firstFlight: string
-    secondFlight: string
-  }
-  fastestTurnaroundCapeCanaveral: {
-    duration: string
-    firstFlight: string
-    secondFlight: string
-  }
-  fastestTurnaroundVandenberg: {
-    duration: string
-    firstFlight: string
-    secondFlight: string
-  }
-  fastestTurnaroundStarbase: {
-    duration: string
-    firstFlight: string
-    secondFlight: string
-  }
-}
+/** Même contrat que les boosters de /api/stats — aucun modèle parallèle. */
+export type LL2BoosterStats = BoosterStats
 
 export interface LL2Landing {
   id: string
@@ -324,23 +269,29 @@ export const ll2BoosterStatsSchema = z.object({
   block5Attempts: z.number(),
   block5Rate: z.number(),
   block5Reflown: z.number(),
-  fastestTurnaround: z.object({
+  fastestBoosterTurnaround: z.object({
     duration: z.string(),
     booster: z.string().optional(),
     firstFlight: z.string(),
     secondFlight: z.string(),
   }),
-  fastestTurnaroundCapeCanaveral: z.object({
+  fastestPadTurnaround: z.object({
+    duration: z.string(),
+    booster: z.string().optional(),
+    firstFlight: z.string(),
+    secondFlight: z.string(),
+  }),
+  fastestPadTurnaroundCapeCanaveral: z.object({
     duration: z.string(),
     firstFlight: z.string(),
     secondFlight: z.string(),
   }),
-  fastestTurnaroundVandenberg: z.object({
+  fastestPadTurnaroundVandenberg: z.object({
     duration: z.string(),
     firstFlight: z.string(),
     secondFlight: z.string(),
   }),
-  fastestTurnaroundStarbase: z.object({
+  fastestPadTurnaroundStarbase: z.object({
     duration: z.string(),
     firstFlight: z.string(),
     secondFlight: z.string(),

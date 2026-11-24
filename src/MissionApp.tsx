@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Badge, Countdown, ErrorState, ExternalLink, Loading, SectionHeading } from './components'
 import { StatsDashboard } from './StatsDashboard'
+import MobileNav from './MobileNav'
 import { BoostersSection } from './BoostersSection'
 import { missionApi } from './api'
 import { launchCalendarHref } from './calendar'
@@ -791,6 +792,7 @@ export default function MissionApp() {
         <div className="source-state"><i /> LL2 + SPACE-TRACK</div>
       </header>
       <main><LaunchesSection /><EventsSection /><StarlinkSection /><StatsDashboard /><BoostersSection /><CacheStatusSection /></main>
+      <MobileNav />
       <footer>
         <div className="brand"><strong>SPACEX</strong><span>COMMUNITY DATA</span></div>
         <p>Launch data by The Space Devs. Orbital elements by Space-Track.org. Not affiliated with SpaceX.</p>

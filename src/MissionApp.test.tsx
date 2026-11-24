@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { missionApi } from './api'
+import { FALLBACK_STATS, missionApi, statsApi } from './api'
 import MissionApp from './MissionApp'
 import {
   cacheStatusFixture,
@@ -12,15 +12,20 @@ import {
   starlinkFixture,
 } from './test/fixtures'
 
-vi.mock('./api', () => ({
-  missionApi: {
-    launches: vi.fn(),
-    launch: vi.fn(),
-    events: vi.fn(),
-    starlink: vi.fn(),
-    cacheStatus: vi.fn(),
-  },
-}))
+vi.mock('./api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./api')>()
+  return {
+    ...actual,
+    missionApi: {
+      launches: vi.fn(),
+      launch: vi.fn(),
+      events: vi.fn(),
+      starlink: vi.fn(),
+      cacheStatus: vi.fn(),
+    },
+    statsApi: { getStats: vi.fn() },
+  }
+})
 
 function renderApp() {
   const client = new QueryClient({
@@ -40,6 +45,7 @@ describe('MissionApp', () => {
     vi.mocked(missionApi.events).mockResolvedValue(eventsFixture)
     vi.mocked(missionApi.starlink).mockResolvedValue(starlinkFixture)
     vi.mocked(missionApi.cacheStatus).mockResolvedValue(cacheStatusFixture)
+    vi.mocked(statsApi.getStats).mockResolvedValue(FALLBACK_STATS)
   })
 
   afterEach(cleanup)
@@ -160,5 +166,14 @@ describe('MissionApp', () => {
     ).toBeInTheDocument()
     expect(screen.getAllByText('60% favorable')).toHaveLength(2)
     expect(screen.getByText('Launch Complex 39A')).toBeInTheDocument()
+  })
+
+  it('renders the mobile bottom navigation alongside the desktop nav', () => {
+    renderApp()
+
+    const mobileNav = screen.getByRole('navigation', { name: 'Navigation mobile' })
+    expect(mobileNav).toBeInTheDocument()
+    expect(mobileNav).toBeVisible()
+    expect(within(mobileNav).getAllByRole('link')).toHaveLength(4)
   })
 })

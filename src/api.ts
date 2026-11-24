@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { normalizeStats } from './statsContract';
 import type {
   Stats,
   Launches,
@@ -17,7 +18,8 @@ async function get<T>(path: string): Promise<T> {
 }
 
 export const statsApi = {
-  getStats: () => get<Stats>('/stats'),
+  // Validation + mapping au même endroit : l'UI ne reçoit jamais le payload brut.
+  getStats: async (): Promise<Stats> => normalizeStats(await get<unknown>('/stats')),
 };
 
 // ── Mission API ───────────────────────────────────────────────────────────────
@@ -31,8 +33,8 @@ export const missionApi = {
 };
 
 // ── Fallback stats (used when API is unreachable) ────────────────────────────
-
-export const FALLBACK_STATS: Stats = {
+// Forme BRUTE, validée et normalisée exactement comme la réponse réseau.
+const FALLBACK_STATS_RAW = {
   fetchedAt: new Date().toISOString(),
   stale: true,
   source: 'fallback',
@@ -64,18 +66,10 @@ export const FALLBACK_STATS: Stats = {
     ],
     mostLaunchesInYear: { year: 2024, planned: 142, completed: 140, rate: 98.6 },
     launchGoal2026: { planned: 78, completed: 78, rate: 100 },
-    total: 328,
-    successful: 312,
-    consecutive: 270,
-    thisYear: 78,
   },
   boosters: {
     totalLanded: 298,
     totalAttempts: 312,
-    active: 18,
-    total: 20,
-    recordFlights: 27,
-    recordBooster: 'B1067',
     landingRate: 96.65,
     mostFlights: { booster: 'B1067', flights: 27 },
     reflown: 245,
@@ -148,11 +142,11 @@ export const FALLBACK_STATS: Stats = {
     { year: 2026, launches: 78 },
   ],
   landingSites: [
-    { site: 'LZ-1 (KSC)', landings: 68, rate: 95 },
-    { site: 'LZ-2 (KSC)', landings: 52, rate: 92 },
-    { site: 'ASES (OCISLY)', landings: 142, rate: 97 },
-    { site: 'ASES (JRTI)', landings: 62, rate: 94 },
-    { site: 'SLC-4E (VES)', landings: 48, rate: 96 },
+    { site: 'LZ-1 (KSC)', landed: 68, attempts: 72, rate: 95 },
+    { site: 'LZ-2 (KSC)', landed: 52, attempts: 57, rate: 92 },
+    { site: 'ASES (OCISLY)', landed: 142, attempts: 146, rate: 97 },
+    { site: 'ASES (JRTI)', landed: 62, attempts: 66, rate: 94 },
+    { site: 'SLC-4E (VES)', landed: 48, attempts: 50, rate: 96 },
   ],
   starlink: {
     inOrbit: 8200,
@@ -187,3 +181,6 @@ export const FALLBACK_STATS: Stats = {
     starlinkRevenue: '$6.8B',
   },
 };
+
+/** Snapshot de secours, normalisé avec le même contrat que la réponse réseau. */
+export const FALLBACK_STATS: Stats = normalizeStats(FALLBACK_STATS_RAW);

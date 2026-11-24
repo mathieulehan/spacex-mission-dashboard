@@ -153,7 +153,9 @@ export function BoostersSection() {
   if (!boosters.length) return <div className="empty">Aucune donnée de booster disponible.</div>;
 
   const globalRate = stats?.boosters?.landingRate ?? 0;
-  const totalAttempts = stats?.boosters?.total ?? 0;
+  // `total` est normalisé depuis `totalAttempts` ; lire la source explicite évite
+  // toute ambiguïté avec un ancien champ « total construits » jamais fourni.
+  const totalAttempts = stats?.boosters?.totalAttempts ?? 0;
   const activeCount = stats?.boosters?.active ?? 0;
   const recordFlights = stats?.boosters?.recordFlights ?? 0;
   const recordBooster = stats?.boosters?.recordBooster ?? '';

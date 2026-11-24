@@ -4,7 +4,10 @@ import { UpstreamError } from './upstream.js'
 const LL2_BASE_URL = 'https://ll.thespacedevs.com/2.2.0'
 const LL2_LANDINGS_CACHE_TTL = 60 * 60 * 1_000 // 1 heure
 
-// Données de bootstrap (valeurs connues, utilisées si LL2 inaccessible)
+// Données de bootstrap (valeurs connues, utilisées si LL2 inaccessible).
+// Snapshot daté du 2026-09-20 : jamais présenté comme une valeur live par
+// StatsService, qui ignore ce retour obsolète quand le scrape spacexnow réussit.
+const LL2_BOOTSTRAP_FETCHED_AT = '2026-09-20T12:00:00.000Z'
 const LL2_BOOTSTRAP_BOOSTERS = {
   totalLanded: 663,
   totalAttempts: 686,
@@ -60,6 +63,12 @@ export class LL2BoosterService {
 
     if (Date.now() < this.blockedUntil) {
       if (cached) return { value: cached.value, stale: true }
+      console.warn(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        event: 'll2_boosters_dated_fallback',
+        asOf: LL2_BOOTSTRAP_FETCHED_AT,
+        reason: 'LL2 cooldown active; serving the dated bootstrap',
+      }))
       return { value: LL2_BOOTSTRAP_BOOSTERS, stale: true }
     }
 
@@ -71,6 +80,12 @@ export class LL2BoosterService {
     } catch (error) {
       this.blockedUntil = Date.now() + LL2_LANDINGS_CACHE_TTL
       if (cached) return { value: cached.value, stale: true }
+      console.warn(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        event: 'll2_boosters_dated_fallback',
+        asOf: LL2_BOOTSTRAP_FETCHED_AT,
+        reason: error instanceof Error ? error.message : String(error),
+      }))
       return { value: LL2_BOOTSTRAP_BOOSTERS, stale: true }
     }
   }

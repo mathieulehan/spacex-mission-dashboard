@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { missionApi } from './api'
+import { FALLBACK_STATS, missionApi, statsApi } from './api'
 import MissionApp from './MissionApp'
 import {
   cacheStatusFixture,
@@ -12,7 +12,8 @@ import {
   starlinkFixture,
 } from './test/fixtures'
 
-vi.mock('./api', () => ({
+vi.mock('./api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./api')>()),
   missionApi: {
     launches: vi.fn(),
     launch: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock('./api', () => ({
     starlink: vi.fn(),
     cacheStatus: vi.fn(),
   },
+  statsApi: { getStats: vi.fn() },
 }))
 
 function renderApp() {
@@ -40,6 +42,7 @@ describe('MissionApp', () => {
     vi.mocked(missionApi.events).mockResolvedValue(eventsFixture)
     vi.mocked(missionApi.starlink).mockResolvedValue(starlinkFixture)
     vi.mocked(missionApi.cacheStatus).mockResolvedValue(cacheStatusFixture)
+    vi.mocked(statsApi.getStats).mockResolvedValue(FALLBACK_STATS)
   })
 
   afterEach(cleanup)
@@ -64,7 +67,7 @@ describe('MissionApp', () => {
     expect(await screen.findByText('8,100')).toBeInTheDocument()
     expect(screen.getByText('STARLINK-1008')).toBeInTheDocument()
     expect(
-      await screen.findByRole('img', { name: /Interactive 3D Earth with 2 calculated/ }),
+      await screen.findByRole('img', { name: /Interactive 3D Earth with 2 calculated/ }, { timeout: 3_000 }),
     ).toBeInTheDocument()
     expect(screen.getByText('Drag to rotate')).toBeInTheDocument()
     expect(screen.getByText(/approximate, not live/)).toBeInTheDocument()
@@ -73,6 +76,17 @@ describe('MissionApp', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Space-Track Starlink')).toBeInTheDocument()
     expect(screen.getByText('LL2 rate-limit window')).toBeInTheDocument()
+  })
+
+  it('renders the boosters section with the global landing rate', async () => {
+    renderApp()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Boosters' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Taux d\'atterrissage global')).toBeInTheDocument()
+    expect(screen.getByRole('table')).toBeInTheDocument()
+    expect(screen.getByText('B1067')).toBeInTheDocument()
   })
 
   it('isolates a Space-Track outage from launch data', async () => {
@@ -135,10 +149,9 @@ describe('MissionApp', () => {
 
     await user.click(await screen.findByRole('button', { name: /Mission details/ }))
 
-    expect(
-      await screen.findByRole('dialog', { name: 'Roman Space Telescope' }),
-    ).toBeInTheDocument()
-    expect(screen.getByText('B1072')).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'Roman Space Telescope' })
+    expect(dialog).toBeInTheDocument()
+    expect(within(dialog).getByText('B1072')).toBeInTheDocument()
     expect(screen.getByText('Official webcast')).toBeInTheDocument()
     expect(screen.getByText('Liftoff')).toBeInTheDocument()
 

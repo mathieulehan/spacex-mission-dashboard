@@ -7,7 +7,7 @@ export function Badge({
   className,
   title,
 }: {
-  tone?: 'live' | 'go' | 'warning' | 'neutral'
+  tone?: 'live' | 'go' | 'warning' | 'risk' | 'neutral'
   children: ReactNode
   className?: string
   title?: string

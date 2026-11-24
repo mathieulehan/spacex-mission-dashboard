@@ -25,18 +25,31 @@ const HTML_ENTITIES: Record<string, string> = {
 
 /** Retire les balises, décode les entités et normalise les espaces. */
 export function stripHtml(raw: string): string {
-  return raw
-    .replace(/<[^>]*>/g, '')
-    .replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (match, name: string) => {
-      if (name.startsWith('#')) {
-        const isHex = name[1]?.toLowerCase() === 'x'
-        const code = Number.parseInt(name.slice(isHex ? 2 : 1), isHex ? 16 : 10)
-        return Number.isFinite(code) ? String.fromCodePoint(code) : match
-      }
-      return HTML_ENTITIES[name.toLowerCase()] ?? match
-    })
-    .replace(/\s+/g, ' ')
-    .trim()
+  // Les entités sont décodées AVANT la suppression des balises : sinon un
+  // `&lt;script&gt;` réintroduirait une balise après le nettoyage.
+  const decoded = raw.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (match, name: string) => {
+    if (name.startsWith('#')) {
+      const isHex = name[1]?.toLowerCase() === 'x'
+      const code = Number.parseInt(name.slice(isHex ? 2 : 1), isHex ? 16 : 10)
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match
+    }
+    return HTML_ENTITIES[name.toLowerCase()] ?? match
+  })
+
+  // Extraction des nœuds texte sans regex de "sanitisation" : un automate
+  // caractère par caractère gère aussi les balises imbriquées.
+  let text = ''
+  let insideTag = false
+  for (const char of decoded) {
+    if (char === '<') {
+      insideTag = true
+    } else if (char === '>') {
+      insideTag = false
+    } else if (!insideTag) {
+      text += char
+    }
+  }
+  return text.replace(/\s+/g, ' ').trim()
 }
 
 /**

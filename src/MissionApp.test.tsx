@@ -12,15 +12,21 @@ import {
   starlinkFixture,
 } from './test/fixtures'
 
-vi.mock('./api', () => ({
-  missionApi: {
-    launches: vi.fn(),
-    launch: vi.fn(),
-    events: vi.fn(),
-    starlink: vi.fn(),
-    cacheStatus: vi.fn(),
-  },
-}))
+vi.mock('./api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./api')>()
+  return {
+    // StatsDashboard est rendu par MissionApp : garder ses exports réels.
+    ...actual,
+    statsApi: { getStats: vi.fn().mockResolvedValue(actual.FALLBACK_STATS) },
+    missionApi: {
+      launches: vi.fn(),
+      launch: vi.fn(),
+      events: vi.fn(),
+      starlink: vi.fn(),
+      cacheStatus: vi.fn(),
+    },
+  }
+})
 
 function renderApp() {
   const client = new QueryClient({

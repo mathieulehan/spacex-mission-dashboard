@@ -181,6 +181,8 @@ export type StatsLaunchCadence = {
   launchesPerYear: LaunchPerYear[]
   mostLaunchesInYear: LaunchPerYear
   launchGoal2026: { planned: number; completed: number; rate: number }
+  // Alias canoniques DÉRIVÉS par normalizeStats() (voir statsContract.ts).
+  // L'API brute ne les envoie pas : ne jamais les lire sur un payload brut.
   total: number
   successful: number
   consecutive: number
@@ -219,6 +221,9 @@ export type StatsBooster = {
   fastestTurnaroundCapeCanaveral: StatsBoosterFastestTurnaround
   fastestTurnaroundVandenberg: StatsBoosterFastestTurnaround
   fastestTurnaroundStarbase: StatsBoosterFastestTurnaround
+  // Alias canoniques DÉRIVÉS par normalizeStats() (voir statsContract.ts).
+  // `active`/`list` sont vides quand la source n'expose pas de fiche booster,
+  // `total` = totalAttempts, `recordFlights/recordBooster` = mostFlights.
   list: Booster[]
   active: number
   total: number
@@ -229,6 +234,7 @@ export type StatsBooster = {
 export type StatsLandingSite = {
   site: string
   landings: number
+  attempts?: number
   rate: number
 }
 
@@ -247,7 +253,8 @@ export type StatsDragon = {
   cargoMissions: number
   crewMissions: number
   testMissions: number
-  totalMissions: number
+  /** Non fourni par spacexnow ; dérivé de la somme cargo + crew + test. */
+  totalMissions?: number
   issCargoUp: string
   issCargoDown: string
   reflights: number

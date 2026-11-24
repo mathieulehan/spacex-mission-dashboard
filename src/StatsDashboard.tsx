@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { statsApi, FALLBACK_STATS } from './api';
-import type { Stats, StatsLandingSite } from './types';
+import { statsSourceLabel } from './statsContract';
+
+// Les taux sont affichés avec 2 décimales ; les volumes restent entiers.
+const formatRate = (rate: number) => (Number.isFinite(rate) ? rate.toFixed(2) : '—');
 
 // ── Animated counter ──────────────────────────────────────────────────────────
 
-function AnimatedCounter({ value, suffix = '', duration = 1200 }: {
+function AnimatedCounter({ value, suffix = '', decimals = 0, duration = 1200 }: {
   value: number;
   suffix?: string;
+  /** 0 pour les volumes entiers, 2 pour les taux : pas d'arrondi entier. */
+  decimals?: number;
   duration?: number;
 }) {
   const [display, setDisplay] = useState(0);
@@ -17,12 +22,13 @@ function AnimatedCounter({ value, suffix = '', duration = 1200 }: {
   useEffect(() => {
     if (startRef.current !== null) return;
     startRef.current = performance.now();
+    const factor = 10 ** decimals;
     const tick = (now: number) => {
       if (!startRef.current) return;
       const elapsed = now - startRef.current;
       const t = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - t, 3);
-      setDisplay(Math.round(value * eased));
+      setDisplay(Math.round(value * eased * factor) / factor);
       if (t < 1) frameRef.current = requestAnimationFrame(tick);
       else startRef.current = null;
     };
@@ -32,9 +38,11 @@ function AnimatedCounter({ value, suffix = '', duration = 1200 }: {
       startRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, duration]);
+  }, [value, decimals, duration]);
 
-  return <>{display}{suffix}</>;
+  // Dernière ligne de défense : jamais de NaN / Infinity dans le DOM.
+  if (!Number.isFinite(value)) return <>—{suffix}</>;
+  return <>{display.toFixed(decimals)}{suffix}</>;
 }
 
 // ── Bar chart (SVG, no external deps) ─────────────────────────────────────────
@@ -191,12 +199,14 @@ function StatCard({
   label,
   value,
   suffix,
+  decimals = 0,
   sublabel,
   color,
 }: {
   label: string;
   value: number;
   suffix?: string;
+  decimals?: number;
   sublabel?: string;
   color: string;
 }) {
@@ -204,7 +214,7 @@ function StatCard({
     <article className="stat-card">
       <span className="stat-card__label" style={{ color }}>{label}</span>
       <div className="stat-card__value" style={{ color }}>
-        <AnimatedCounter value={value} suffix={suffix} />
+        <AnimatedCounter value={value} suffix={suffix} decimals={decimals} />
       </div>
       {sublabel && <span className="stat-card__sub">{sublabel}</span>}
     </article>
@@ -223,14 +233,8 @@ export function StatsDashboard() {
 
   const data = stats.data ?? FALLBACK_STATS;
   const cadence = data.launchCadence;
-  // server may return landingSites as { LZ1: {...}, LZ2: {...} } or as [{ site, landed, attempts, rate }];
-  // normalize to the array shape LandingSitesChart expects
-  const landingSites: Array<{ site: string; landings: number; rate: number }> =
-    Array.isArray(data.landingSites)
-      ? data.landingSites.map((s: StatsLandingSite) => ({ site: s.site, landings: s.landings, rate: s.rate }))
-      : Object.entries(data.landingSites as Record<string, { landed: number; attempts: number; rate: number }>).map(
-          ([site, s]) => ({ site, landings: s.landed, rate: s.rate }),
-        );
+  // normalizeStats() a déjà converti `landed` → `landings` : une seule forme canonique.
+  const landingSites = data.landingSites;
   const maxYear = Math.max(...(cadence.launchesPerYear ?? []).map((d: { year: number; planned?: number; completed?: number; rate?: number }) => d.completed ?? d.planned ?? 0));
 
   return (
@@ -245,7 +249,7 @@ export function StatsDashboard() {
               ? 'Chargement des statistiques…'
               : stats.isError
                 ? `API unavailable: ${stats.error.message}`
-                : `Données mises à jour depuis l'API The Space Devs. ${cadence.total} lancements au total.`}
+                : statsSourceLabel(data)}
           </p>
         </div>
       </div>
@@ -273,6 +277,7 @@ export function StatsDashboard() {
             <StatCard
               label="Taux de réussite"
               value={cadence.successRate}
+              decimals={2}
               suffix="%"
               sublabel={`${cadence.successful} sur ${cadence.total} missions`}
               color="var(--green)"
@@ -311,16 +316,18 @@ export function StatsDashboard() {
           {/* ── Boosters mini-card ── */}
           <div className="stats-boosters">
             <div className="stat-boosters__card">
-              <span className="stat-boosters__label">Boosters actifs</span>
+              {/* `active`/`total` (construits) n'existent pas dans la source :
+                  on affiche des agrégats réellement renvoyés par l'API. */}
+              <span className="stat-boosters__label">Atterrissages réussis</span>
               <span className="stat-boosters__value" style={{ color: 'var(--green)' }}>
-                {data.boosters.active}
-                <small>/{data.boosters.total} construits</small>
+                {data.boosters.totalLanded}
+                <small>/{data.boosters.totalAttempts} tentatives</small>
               </span>
             </div>
             <div className="stat-boosters__card">
               <span className="stat-boosters__label">Taux d'atterrissage</span>
               <span className="stat-boosters__value" style={{ color: 'var(--amber)' }}>
-                {data.boosters.landingRate}
+                {formatRate(data.boosters.landingRate)}
                 <small>%</small>
               </span>
             </div>
@@ -328,7 +335,7 @@ export function StatsDashboard() {
               <span className="stat-boosters__label">Record de vol</span>
               <span className="stat-boosters__value" style={{ color: 'var(--blue)' }}>
                 {data.boosters.recordFlights}
-                <small>vol · {data.boosters.recordBooster}</small>
+                <small> vols · {data.boosters.recordBooster}</small>
               </span>
             </div>
           </div>

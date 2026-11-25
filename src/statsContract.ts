@@ -1,11 +1,12 @@
 /**
  * Contrat unique /api/stats ↔ UI.
  *
- * Le serveur envoie la forme BRUTE (totalLaunches, landed, mostFlights…).
+ * Le serveur envoie la forme BRUTE (totalLaunches, landed, fastestPadTurnaround…).
  * L'UI consomme des alias DÉRIVÉS (total, landings, recordFlights…).
  * Ce module est le seul endroit où les deux formes se rencontrent :
  *   - validation Zod du payload réseau (échec bruyant, jamais de NaN silencieux) ;
- *   - normalisation vers la forme canonique consommée par les composants.
+ *   - normalisation vers la forme canonique consommée par les composants ;
+ *   - acceptation des anciens noms de champs pour les payloads en cache.
  *
  * Aucun composant ne doit lire un champ brut ou bricolé de /api/stats.
  */
@@ -14,8 +15,23 @@ import type { LaunchPerYear, Stats } from './types'
 
 const finite = z.number().finite()
 
+type YearBucketInput = {
+  year?: number
+  attempts?: number
+  successes?: number
+  target?: number
+  achieved?: number
+  /** @deprecated alias lu pour les anciens payloads. */
+  planned?: number
+  /** @deprecated alias lu pour les anciens payloads. */
+  completed?: number
+  rate?: number
+}
+
 const yearBucketSchema = z.object({
   year: finite,
+  attempts: finite.optional(),
+  successes: finite.optional(),
   planned: finite.optional(),
   completed: finite.optional(),
   rate: finite.optional(),
@@ -23,6 +39,8 @@ const yearBucketSchema = z.object({
 
 /** Objectif annuel : pas de `year` dans le payload réel. */
 const goalSchema = z.object({
+  target: finite.optional(),
+  achieved: finite.optional(),
   planned: finite,
   completed: finite,
   rate: finite,
@@ -34,6 +52,8 @@ const turnaroundSchema = z.object({
   firstFlight: z.string(),
   secondFlight: z.string(),
 })
+
+const emptyTurnaround = () => ({ duration: '', firstFlight: '', secondFlight: '' })
 
 const boosterListItemSchema = z.object({
   serialNumber: z.string(),
@@ -51,6 +71,8 @@ export const statsApiResponseSchema = z.object({
   fetchedAt: z.string().min(1),
   stale: z.boolean(),
   source: z.enum(['spacexnow', 'api', 'fallback']).optional(),
+  sourceUrl: z.string().optional(),
+  fallbackAsOf: z.string().optional(),
 
   launchCadence: z.object({
     totalLaunches: finite,
@@ -62,6 +84,10 @@ export const statsApiResponseSchema = z.object({
     launchesPerYear: z.array(yearBucketSchema),
     mostLaunchesInYear: yearBucketSchema.optional(),
     launchGoal2026: goalSchema.optional(),
+    /** @deprecated Remplacé par unlistedAttempts / unlistedSuccesses. */
+    unlistedLaunches: finite.optional(),
+    unlistedAttempts: finite.optional(),
+    unlistedSuccesses: finite.optional(),
   }),
 
   boosters: z.object({
@@ -74,10 +100,17 @@ export const statsApiResponseSchema = z.object({
     block5Attempts: finite.optional(),
     block5Rate: finite.optional(),
     block5Reflown: finite.optional(),
-    fastestTurnaround: turnaroundSchema,
-    fastestTurnaroundCapeCanaveral: turnaroundSchema,
-    fastestTurnaroundVandenberg: turnaroundSchema,
-    fastestTurnaroundStarbase: turnaroundSchema,
+    // Noms explicites : pad (record de piste) vs booster (réutilisation).
+    fastestBoosterTurnaround: turnaroundSchema.optional(),
+    fastestPadTurnaround: turnaroundSchema.optional(),
+    fastestPadTurnaroundCapeCanaveral: turnaroundSchema.optional(),
+    fastestPadTurnaroundVandenberg: turnaroundSchema.optional(),
+    fastestPadTurnaroundStarbase: turnaroundSchema.optional(),
+    // Anciens noms, acceptés pour les snapshots déjà en cache.
+    fastestTurnaround: turnaroundSchema.optional(),
+    fastestTurnaroundCapeCanaveral: turnaroundSchema.optional(),
+    fastestTurnaroundVandenberg: turnaroundSchema.optional(),
+    fastestTurnaroundStarbase: turnaroundSchema.optional(),
     /** Absent de la source spacexnow : pas de fiche par booster dans ce cas. */
     list: z.array(boosterListItemSchema).optional(),
   }),
@@ -88,6 +121,10 @@ export const statsApiResponseSchema = z.object({
     attempts: finite.optional(),
     rate: finite,
   })),
+  landingSitesScope: z.object({
+    excludedFromBoosterTotals: z.array(z.string()),
+    unattributedAttempts: finite,
+  }).optional(),
 
   starlink: z.object({
     inOrbit: finite,
@@ -128,19 +165,16 @@ export const statsApiResponseSchema = z.object({
 
 export type StatsApiResponse = z.infer<typeof statsApiResponseSchema>
 
-type PartialBucket = {
-  year?: number
-  planned?: number
-  completed?: number
-  rate?: number
-}
-
-/** complète un bucket partiel sans jamais laisser `undefined` dans l'UI. */
-function toLaunchPerYear(bucket: PartialBucket | undefined, fallbackYear: number): LaunchPerYear {
+/**
+ * Complète un bucket partiel sans jamais laisser `undefined` dans l'UI.
+ * Les noms canoniques (`attempts`/`successes`, `target`/`achieved`) sont lus
+ * en priorité ; `planned`/`completed` ne restent que des alias de compatibilité.
+ */
+function toLaunchPerYear(bucket: YearBucketInput | undefined, fallbackYear: number): LaunchPerYear {
   return {
     year: bucket?.year ?? fallbackYear,
-    planned: bucket?.planned ?? 0,
-    completed: bucket?.completed ?? 0,
+    planned: bucket?.attempts ?? bucket?.target ?? bucket?.planned ?? 0,
+    completed: bucket?.successes ?? bucket?.achieved ?? bucket?.completed ?? 0,
     rate: bucket?.rate ?? 0,
   }
 }
@@ -166,11 +200,29 @@ export function normalizeStats(raw: unknown): Stats {
   )
   const list = payload.boosters.list ?? []
   const active = list.filter((booster) => booster.status === 'active').length
+  const b = payload.boosters
+  const listedAttempts = payload.launchCadence.launchesPerYear.reduce(
+    (sum, entry) => sum + (entry.attempts ?? entry.planned ?? 0), 0,
+  )
+  const listedSuccesses = payload.launchCadence.launchesPerYear.reduce(
+    (sum, entry) => sum + (entry.successes ?? entry.completed ?? 0), 0,
+  )
+  const unlistedAttempts =
+    payload.launchCadence.unlistedAttempts ??
+    Math.max(0, payload.launchCadence.totalLaunches - listedAttempts)
+  const unlistedSuccesses =
+    payload.launchCadence.unlistedSuccesses ??
+    Math.max(0, payload.launchCadence.successfulLaunches - listedSuccesses)
+  // Alias historique : « écart tentatives totales vs succès listés ».
+  // 15 = 6 tentatives non listées + 9 échecs des années listées.
+  const unlistedLaunches = unlistedAttempts + Math.max(0, listedAttempts - listedSuccesses)
 
   return {
     fetchedAt: payload.fetchedAt,
     stale: payload.stale,
     source: payload.source,
+    sourceUrl: payload.sourceUrl,
+    fallbackAsOf: payload.fallbackAsOf,
 
     launchCadence: {
       ...payload.launchCadence,
@@ -185,30 +237,45 @@ export function normalizeStats(raw: unknown): Stats {
         currentYear,
       ),
       launchGoal2026: toLaunchPerYear(payload.launchCadence.launchGoal2026, currentYear),
+      unlistedLaunches,
+      unlistedAttempts,
+      unlistedSuccesses,
       // Alias canoniques dérivés — jamais fournis par l'API brute.
       total: payload.launchCadence.totalLaunches,
       successful: payload.launchCadence.successfulLaunches,
       consecutive: payload.launchCadence.currentSuccessive,
       thisYear:
+        thisYearEntry?.successes ??
         thisYearEntry?.completed ??
+        payload.launchCadence.launchGoal2026?.achieved ??
         payload.launchCadence.launchGoal2026?.completed ??
         0,
     },
 
     boosters: {
-      ...payload.boosters,
-      reflown: payload.boosters.reflown ?? 0,
-      block5Landed: payload.boosters.block5Landed ?? 0,
-      block5Attempts: payload.boosters.block5Attempts ?? 0,
-      block5Rate: payload.boosters.block5Rate ?? 0,
-      block5Reflown: payload.boosters.block5Reflown ?? 0,
+      ...b,
+      reflown: b.reflown ?? 0,
+      block5Landed: b.block5Landed ?? 0,
+      block5Attempts: b.block5Attempts ?? 0,
+      block5Rate: b.block5Rate ?? 0,
+      block5Reflown: b.block5Reflown ?? 0,
+      fastestBoosterTurnaround:
+        b.fastestBoosterTurnaround ?? b.fastestTurnaround ?? emptyTurnaround(),
+      fastestPadTurnaround:
+        b.fastestPadTurnaround ?? b.fastestPadTurnaroundCapeCanaveral ?? emptyTurnaround(),
+      fastestPadTurnaroundCapeCanaveral:
+        b.fastestPadTurnaroundCapeCanaveral ?? b.fastestTurnaroundCapeCanaveral ?? emptyTurnaround(),
+      fastestPadTurnaroundVandenberg:
+        b.fastestPadTurnaroundVandenberg ?? b.fastestTurnaroundVandenberg ?? emptyTurnaround(),
+      fastestPadTurnaroundStarbase:
+        b.fastestPadTurnaroundStarbase ?? b.fastestTurnaroundStarbase ?? emptyTurnaround(),
       // Alias canoniques dérivés. `active`/`total` ne sont pas exposés par la
       // source spacexnow : `total` signifie ici « tentatives d'atterrissage ».
       list,
       active,
-      total: payload.boosters.totalAttempts,
-      recordFlights: payload.boosters.mostFlights.flights,
-      recordBooster: payload.boosters.mostFlights.booster,
+      total: b.totalAttempts,
+      recordFlights: b.mostFlights.flights,
+      recordBooster: b.mostFlights.booster,
     },
 
     landingSites: payload.landingSites.map((site) => ({
@@ -217,6 +284,15 @@ export function normalizeStats(raw: unknown): Stats {
       attempts: site.attempts ?? 0,
       rate: site.rate,
     })),
+    landingSitesScope: payload.landingSitesScope ?? {
+      excludedFromBoosterTotals: [],
+      unattributedAttempts: Math.max(
+        0,
+        b.totalAttempts - payload.landingSites.reduce(
+          (sum, site) => sum + (site.attempts ?? 0), 0,
+        ),
+      ),
+    },
 
     starlink: payload.starlink,
     dragons: {

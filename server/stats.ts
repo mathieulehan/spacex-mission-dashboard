@@ -8,248 +8,55 @@ import {
   parseFraction,
   parseNumber,
   parseStatsSections,
-  type Fraction,
   type StatsRow,
   type StatsSection,
 } from './spacexnow-html.js'
+import {
+  assertStatsInvariants,
+  finalizeStats,
+  makeLaunchGoal,
+  makeYearBucket,
+  SPACEXNOW_BOOTSTRAP,
+  SPACEXNOW_STATS_URL,
+  type BoosterStats,
+  type BoosterFastestTurnaround,
+  type CapsuleStats,
+  type DragonStats,
+  type LaunchCadenceStats,
+  type LaunchPerYear,
+  type LandingSitesStats,
+  type SpaceXNowStats,
+  type StarlinkStats,
+} from './stats-snapshot.js'
+
+// Ré-export : les consommateurs historiques (tests, app) gardent leurs imports.
+export {
+  assertStatsInvariants,
+  finalizeStats,
+  SPACEXNOW_BOOTSTRAP,
+  SPACEXNOW_BOOTSTRAP_FETCHED_AT,
+  BUSINESS_FALLBACK_AS_OF,
+  SPACEXNOW_STATS_URL,
+} from './stats-snapshot.js'
+export type {
+  BoosterStats,
+  BoosterFastestTurnaround,
+  CapsuleStats,
+  DragonStats,
+  LaunchCadenceStats,
+  LaunchPerYear,
+  LandingSiteStats,
+  LandingSitesStats,
+  SpaceXNowStats,
+  StarlinkStats,
+} from './stats-snapshot.js'
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const SPACEXNOW_STATS_URL = 'https://spacexnow.com/stats'
 const SPACEXNOW_CACHE_TTL_MS = 60 * 60 * 1_000 // 1 hour – site updates daily at most
 const CACHE_KEY = 'spacexnow:stats'
-
-// ---------------------------------------------------------------------------
-// Snapshot de secours (spacexnow.com/stats au 2026-09-20).
-// UNIQUEMENT servi quand l'amont est indisponible : `stale: true` et
-// `fetchedAt` = date réelle du snapshot, jamais présenté comme du live.
-// ---------------------------------------------------------------------------
-
-export const SPACEXNOW_BOOTSTRAP_FETCHED_AT = '2026-09-20T12:00:00.000Z'
-
-/** spacexnow.com/stats ne publie pas ces chiffres : ils sont datés, non live. */
-export const BUSINESS_FALLBACK_AS_OF = '2025-01-01T00:00:00.000Z'
-
-export const SPACEXNOW_BOOTSTRAP: SpaceXNowStats = {
-  fetchedAt: SPACEXNOW_BOOTSTRAP_FETCHED_AT,
-  stale: true,
-  source: 'fallback',
-  fallbackAsOf: SPACEXNOW_BOOTSTRAP_FETCHED_AT,
-  launchCadence: {
-    totalLaunches: 721,
-    successfulLaunches: 709,
-    failedLaunches: 12,
-    successRate: 98.34,
-    mostSuccessive: 335,
-    currentSuccessive: 338,
-    launchesPerYear: [
-      { year: 2026, planned: 111, completed: 111, rate: 100 },
-      { year: 2025, planned: 170, completed: 167, rate: 98.24 },
-      { year: 2024, planned: 138, completed: 136, rate: 98.55 },
-      { year: 2023, planned: 98, completed: 96, rate: 97.96 },
-      { year: 2022, planned: 61, completed: 61, rate: 100 },
-      { year: 2021, planned: 31, completed: 31, rate: 100 },
-      { year: 2020, planned: 25, completed: 25, rate: 100 },
-      { year: 2019, planned: 13, completed: 13, rate: 100 },
-      { year: 2018, planned: 21, completed: 21, rate: 100 },
-      { year: 2017, planned: 18, completed: 18, rate: 100 },
-      { year: 2016, planned: 9, completed: 8, rate: 88.9 },
-      { year: 2015, planned: 7, completed: 6, rate: 85.7 },
-      { year: 2014, planned: 6, completed: 6, rate: 100 },
-      { year: 2013, planned: 3, completed: 3, rate: 100 },
-      { year: 2012, planned: 2, completed: 2, rate: 100 },
-      { year: 2010, planned: 2, completed: 2, rate: 100 },
-    ],
-    mostLaunchesInYear: { year: 2025, planned: 145, completed: 167, rate: 76.55 },
-    launchGoal2026: { planned: 145, completed: 111, rate: 76.55 },
-  },
-  boosters: {
-    totalLanded: 663,
-    totalAttempts: 686,
-    landingRate: 96.65,
-    mostFlights: { booster: 'B1067', flights: 37 },
-    reflown: 625,
-    block5Landed: 639,
-    block5Attempts: 645,
-    block5Rate: 99.07,
-    block5Reflown: 611,
-    fastestTurnaround: {
-      duration: '9 days, 3 hours',
-      booster: 'B1088',
-      firstFlight: 'SPHEREx & PUNCH (Mar 12 2025)',
-      secondFlight: 'NROL-57 (Mar 21 2025)',
-    },
-    fastestTurnaroundCapeCanaveral: {
-      duration: '1 day, 21 hours',
-      firstFlight: 'Starlink Group 6-97 (Jan 12 2026)',
-      secondFlight: 'Starlink Group 6-98 (Jan 14 2026)',
-    },
-    fastestTurnaroundVandenberg: {
-      duration: '2 days, 7 hours',
-      firstFlight: 'NROL-179 (Jun 19 2026)',
-      secondFlight: 'Starlink Group 17-28 (Jun 21 2026)',
-    },
-    fastestTurnaroundStarbase: {
-      duration: '1 month, 7 days',
-      firstFlight: 'Starship Flight 5 (Oct 13 2024)',
-      secondFlight: 'Starship Flight 6 (Nov 19 2024)',
-    },
-  },
-  starlink: {
-    inOrbit: 11160,
-    starlinkLaunches: 426,
-    totalLaunches: 721,
-    starlinkRate: 59.08,
-    heaviestLeoLift: {
-      mass: '17,500 kg',
-      mission: 'Starlink 6-39 (+54 satellites)',
-    },
-    heaviestGtoLift: {
-      mass: '9,200 kg',
-      mission: 'Jupiter 3 / EchoStar-24',
-    },
-  },
-  landingSites: [
-    { site: 'LZ1', landed: 53, attempts: 54, rate: 98.15 },
-    { site: 'LZ2', landed: 19, attempts: 19, rate: 100 },
-    { site: 'LZ4', landed: 35, attempts: 35, rate: 100 },
-    { site: 'LZ40', landed: 6, attempts: 6, rate: 100 },
-    { site: 'ASOG', landed: 167, attempts: 168, rate: 99.4 },
-    { site: 'JRTI', landed: 156, attempts: 159, rate: 98.11 },
-    { site: 'OCISLY', landed: 227, attempts: 235, rate: 96.6 },
-    { site: 'Catch', landed: 3, attempts: 4, rate: 75 },
-  ],
-  dragons: {
-    cargoMissions: 36,
-    crewMissions: 19,
-    testMissions: 1,
-    issCargoUp: '70 tonnes',
-    issCargoDown: '49 tonnes',
-    reflights: 9,
-    crewInOrbit: 4,
-    crewFlownTotal: 74,
-  },
-  capsules: {
-    landed: 56,
-    attempts: 57,
-    rate: 98.25,
-    reflown: 33,
-  },
-  business: {
-    revenue2025: '12.5B USD (estimated)',
-    valuation: '350B USD (private, 2024)',
-    employees: '~10,000 (estimated)',
-    starlinkSubscribers: '~4M (estimated, Q1 2025)',
-    starlinkRevenue: '7.4B USD (2024, est.)',
-  },
-}
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type LaunchPerYear = {
-  year: number
-  planned: number
-  completed: number
-  rate: number
-}
-
-export type BoosterFastestTurnaround = {
-  duration: string
-  booster?: string
-  firstFlight: string
-  secondFlight: string
-}
-
-export type BoosterStats = {
-  totalLanded: number
-  totalAttempts: number
-  landingRate: number
-  mostFlights: { booster: string; flights: number }
-  reflown: number
-  block5Landed: number
-  block5Attempts: number
-  block5Rate: number
-  block5Reflown: number
-  fastestTurnaround: BoosterFastestTurnaround
-  fastestTurnaroundCapeCanaveral: BoosterFastestTurnaround
-  fastestTurnaroundVandenberg: BoosterFastestTurnaround
-  fastestTurnaroundStarbase: BoosterFastestTurnaround
-}
-
-export type StarlinkStats = {
-  inOrbit: number
-  starlinkLaunches: number
-  totalLaunches: number
-  starlinkRate: number
-  heaviestLeoLift: { mass: string; mission: string }
-  heaviestGtoLift: { mass: string; mission: string }
-}
-
-export type LandingSiteStats = {
-  landed: number
-  attempts: number
-  rate: number
-}
-
-export type LandingSitesStats = Array<LandingSiteStats & { site: string }>
-
-export type DragonStats = {
-  cargoMissions: number
-  crewMissions: number
-  testMissions: number
-  issCargoUp: string
-  issCargoDown: string
-  reflights: number
-  crewInOrbit: number
-  crewFlownTotal: number
-}
-
-export type CapsuleStats = {
-  landed: number
-  attempts: number
-  rate: number
-  reflown: number
-}
-
-export type BusinessStats = {
-  revenue2025: string
-  valuation: string
-  employees: string
-  starlinkSubscribers: string
-  starlinkRevenue: string
-}
-
-export type LaunchCadenceStats = {
-  totalLaunches: number
-  successfulLaunches: number
-  failedLaunches: number
-  successRate: number
-  mostSuccessive: number
-  currentSuccessive: number
-  launchesPerYear: LaunchPerYear[]
-  mostLaunchesInYear: LaunchPerYear
-  launchGoal2026: { planned: number; completed: number; rate: number }
-}
-
-export type SpaceXNowStats = {
-  fetchedAt: string
-  stale: boolean
-  /** Origine réelle des données : `fallback` signale un snapshot de secours. */
-  source: 'spacexnow' | 'fallback'
-  /** Date des champs non publiés par la source (business), jamais du live. */
-  fallbackAsOf: string
-  launchCadence: LaunchCadenceStats
-  boosters: BoosterStats
-  starlink: StarlinkStats
-  landingSites: LandingSitesStats
-  dragons: DragonStats
-  capsules: CapsuleStats
-  business: BusinessStats
-}
 
 // ---------------------------------------------------------------------------
 // Scraper — les tables sont repérées par leur titre <h3>, jamais par index.
@@ -265,19 +72,6 @@ function requireSection(sections: StatsSection[], heading: string): StatsSection
     )
   }
   return section
-}
-
-function requireFraction(section: StatsSection, label: string, heading: string): Fraction {
-  const row = findRow(section, label)
-  const fraction = row ? parseFraction(row.value) : null
-  if (!fraction || fraction.total <= 0) {
-    throw new UpstreamError(
-      `spacexnow.com: valeur "${label}" introuvable dans "${heading}"`,
-      502,
-      'UPSTREAM_INVALID_SHAPE',
-    )
-  }
-  return fraction
 }
 
 function turnaroundFromRow(row: StatsRow | undefined): BoosterFastestTurnaround {
@@ -304,7 +98,11 @@ function buildLaunchCadence(
       if (!Number.isInteger(year) || year < 2000) return null
       const fraction = parseFraction(row.value)
       if (!fraction) return null
-      return { year, planned: fraction.total, completed: fraction.success, rate: fraction.rate }
+      return makeYearBucket({
+        year,
+        attempts: fraction.total,
+        successes: fraction.success,
+      })
     })
     .filter((entry): entry is LaunchPerYear => entry !== null)
     .sort((a, b) => b.year - a.year)
@@ -339,14 +137,26 @@ function buildLaunchCadence(
     currentSuccessive: parseNumber(findRow(launchCount, 'Successive')?.value ?? '0'),
     launchesPerYear,
     mostLaunchesInYear: launchesPerYear.reduce((best, entry) =>
-      entry.completed > best.completed ? entry : best,
+      entry.successes > best.successes ? entry : best,
     ),
-    launchGoal2026: {
-      planned: goal.total,
-      completed: goal.success,
-      rate: goal.rate,
-    },
+    launchGoal2026: makeLaunchGoal({ target: goal.total, achieved: goal.success }),
+    // Recalculés par finalizeStats() : total − Σ tentatives, succès − Σ succès.
+    unlistedAttempts: 0,
+    unlistedSuccesses: 0,
   }
+}
+
+function requireFraction(section: StatsSection, label: string, heading: string) {
+  const row = findRow(section, label)
+  const fraction = row ? parseFraction(row.value) : null
+  if (!fraction || fraction.total <= 0) {
+    throw new UpstreamError(
+      `spacexnow.com: valeur "${label}" introuvable dans "${heading}"`,
+      502,
+      'UPSTREAM_INVALID_SHAPE',
+    )
+  }
+  return fraction
 }
 
 function buildBoosters(boosterSection: StatsSection, turnarounds?: StatsSection): BoosterStats {
@@ -365,10 +175,12 @@ function buildBoosters(boosterSection: StatsSection, turnarounds?: StatsSection)
     block5Attempts: block5.total,
     block5Rate: block5.rate,
     block5Reflown: parseNumber(findRow(boosterSection, 'Block 5 reflown')?.value ?? '0'),
-    fastestTurnaround: turnaroundFromRow(findRow(turnarounds, 'Booster')),
-    fastestTurnaroundCapeCanaveral: turnaroundFromRow(findRow(turnarounds, 'Cape Canaveral')),
-    fastestTurnaroundVandenberg: turnaroundFromRow(findRow(turnarounds, 'Vandenberg')),
-    fastestTurnaroundStarbase: turnaroundFromRow(findRow(turnarounds, 'Starbase')),
+    // Deux métriques de nature différente, désormais nommés explicitement.
+    fastestBoosterTurnaround: turnaroundFromRow(findRow(turnarounds, 'Booster')),
+    fastestPadTurnaround: turnaroundFromRow(findRow(turnarounds, 'Fastest')),
+    fastestPadTurnaroundCapeCanaveral: turnaroundFromRow(findRow(turnarounds, 'Cape Canaveral')),
+    fastestPadTurnaroundVandenberg: turnaroundFromRow(findRow(turnarounds, 'Vandenberg')),
+    fastestPadTurnaroundStarbase: turnaroundFromRow(findRow(turnarounds, 'Starbase')),
   }
 }
 
@@ -506,21 +318,25 @@ export async function scrapeSpacexnowStats(
     const payloads = requireSection(sections, 'Payloads')
     const starlink = buildStarlink(launchCount, payloads, launchCadence)
 
-    return {
+    const result = finalizeStats({
       fetchedAt: now().toISOString(),
       stale: false,
       source: 'spacexnow',
-      // Les seules valeurs non publiées par la source restent datées et
-      // explicitement marquées comme telles (jamais présentées comme live).
-      fallbackAsOf: BUSINESS_FALLBACK_AS_OF,
+      sourceUrl: SPACEXNOW_STATS_URL,
+      // Ce champ est nettoyé par finalizeStats() : interdit sur un payload live.
+      fallbackAsOf: undefined,
       launchCadence,
       boosters,
       starlink,
       landingSites,
+      // Catch = Starship, pas un booster landing Falcon 9.
+      landingSitesScope: { excludedFromBoosterTotals: ['Catch'], unattributedAttempts: 0 },
       dragons,
       capsules,
       business: SPACEXNOW_BOOTSTRAP.business,
-    }
+    })
+    assertStatsInvariants(result)
+    return result
   } catch (error) {
     clearTimeout(timeout)
     if (error instanceof UpstreamError) throw error
@@ -534,7 +350,7 @@ export async function scrapeSpacexnowStats(
 }
 
 // ---------------------------------------------------------------------------
-// StatsService
+// StatsService — toute valeur servie est finalisée puis validée.
 // ---------------------------------------------------------------------------
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -570,6 +386,12 @@ export class StatsService {
     return this.blockedUntil > Date.now() ? this.blockedUntil : null
   }
 
+  private static verified(value: SpaceXNowStats): SpaceXNowStats {
+    const finalized = finalizeStats(value)
+    assertStatsInvariants(finalized)
+    return finalized
+  }
+
   private static asStale(value: SpaceXNowStats): SpaceXNowStats {
     return { ...value, stale: true }
   }
@@ -577,14 +399,16 @@ export class StatsService {
   async getStats(): Promise<{ value: SpaceXNowStats; stale: boolean }> {
     const cached = await this.cache.get(CACHE_KEY, statsSchema)
     if (cached && Date.now() - cached.fetchedAt < SPACEXNOW_CACHE_TTL_MS) {
-      return { value: { ...cached.value, stale: false }, stale: false }
+      return { value: StatsService.verified(cached.value), stale: false }
     }
 
     // Fenêtre de cooldown : on sert le dernier snapshot réel, jamais une
     // valeur live reconstruite à partir du bootstrap.
     if (Date.now() < this.blockedUntil) {
-      if (cached) return { value: StatsService.asStale(cached.value), stale: true }
-      return { value: { ...SPACEXNOW_BOOTSTRAP, stale: true }, stale: true }
+      if (cached) {
+        return { value: StatsService.asStale(StatsService.verified(cached.value)), stale: true }
+      }
+      return { value: StatsService.asStale(StatsService.verified(SPACEXNOW_BOOTSTRAP)), stale: true }
     }
 
     try {
@@ -612,9 +436,10 @@ export class StatsService {
         }))
       }
 
-      await this.cache.set(CACHE_KEY, stats)
+      const verified = StatsService.verified(stats)
+      await this.cache.set(CACHE_KEY, verified)
       this.blockedUntil = 0
-      return { value: stats, stale: false }
+      return { value: verified, stale: false }
     } catch (error) {
       this.blockedUntil = Date.now() + SPACEXNOW_CACHE_TTL_MS
       const reason = error instanceof Error ? error.message : String(error)
@@ -626,17 +451,26 @@ export class StatsService {
         code,
         status: error instanceof UpstreamError ? error.status : 502,
       }))
-      if (cached) return { value: StatsService.asStale(cached.value), stale: true }
-      return { value: { ...SPACEXNOW_BOOTSTRAP, stale: true }, stale: true }
+      if (cached) {
+        return { value: StatsService.asStale(StatsService.verified(cached.value)), stale: true }
+      }
+      return { value: StatsService.asStale(StatsService.verified(SPACEXNOW_BOOTSTRAP)), stale: true }
     }
   }
 }
 
 // ---------------------------------------------------------------------------
-// Zod schema for validated parsing
+// Validation Zod — miroir exact du contrat /api/stats.
 // ---------------------------------------------------------------------------
 
 import { z } from 'zod'
+
+const turnaroundSchema = z.object({
+  duration: z.string(),
+  booster: z.string().optional(),
+  firstFlight: z.string(),
+  secondFlight: z.string(),
+})
 
 const landingSitesSchema = z.array(
   z.object({
@@ -649,6 +483,18 @@ const landingSitesSchema = z.array(
 
 const launchPerYearSchema = z.object({
   year: z.number(),
+  attempts: z.number(),
+  successes: z.number(),
+  // Alias de compatibilité (une version) : encore émis par le serveur, mais
+  // les consommateurs doivent lire `attempts`/`successes`.
+  planned: z.number(),
+  completed: z.number(),
+  rate: z.number(),
+})
+
+const launchGoalSchema = z.object({
+  target: z.number(),
+  achieved: z.number(),
   planned: z.number(),
   completed: z.number(),
   rate: z.number(),
@@ -663,11 +509,9 @@ const launchCadenceSchema = z.object({
   currentSuccessive: z.number(),
   launchesPerYear: z.array(launchPerYearSchema),
   mostLaunchesInYear: launchPerYearSchema,
-  launchGoal2026: z.object({
-    planned: z.number(),
-    completed: z.number(),
-    rate: z.number(),
-  }),
+  launchGoal2026: launchGoalSchema,
+  unlistedAttempts: z.number(),
+  unlistedSuccesses: z.number(),
 })
 
 const boosterSchema = z.object({
@@ -683,27 +527,11 @@ const boosterSchema = z.object({
   block5Attempts: z.number(),
   block5Rate: z.number(),
   block5Reflown: z.number(),
-  fastestTurnaround: z.object({
-    duration: z.string(),
-    booster: z.string().optional(),
-    firstFlight: z.string(),
-    secondFlight: z.string(),
-  }),
-  fastestTurnaroundCapeCanaveral: z.object({
-    duration: z.string(),
-    firstFlight: z.string(),
-    secondFlight: z.string(),
-  }),
-  fastestTurnaroundVandenberg: z.object({
-    duration: z.string(),
-    firstFlight: z.string(),
-    secondFlight: z.string(),
-  }),
-  fastestTurnaroundStarbase: z.object({
-    duration: z.string(),
-    firstFlight: z.string(),
-    secondFlight: z.string(),
-  }),
+  fastestBoosterTurnaround: turnaroundSchema,
+  fastestPadTurnaround: turnaroundSchema,
+  fastestPadTurnaroundCapeCanaveral: turnaroundSchema,
+  fastestPadTurnaroundVandenberg: turnaroundSchema,
+  fastestPadTurnaroundStarbase: turnaroundSchema,
 })
 
 const starlinkSchema = z.object({
@@ -751,11 +579,16 @@ export const statsSchema = z.object({
   fetchedAt: z.string(),
   stale: z.boolean(),
   source: z.enum(['spacexnow', 'fallback']),
-  fallbackAsOf: z.string(),
+  sourceUrl: z.string(),
+  fallbackAsOf: z.string().optional(),
   launchCadence: launchCadenceSchema,
   boosters: boosterSchema,
   starlink: starlinkSchema,
   landingSites: landingSitesSchema,
+  landingSitesScope: z.object({
+    excludedFromBoosterTotals: z.array(z.string()),
+    unattributedAttempts: z.number(),
+  }),
   dragons: dragonSchema,
   capsules: capsuleSchema,
   business: businessSchema,

@@ -181,6 +181,12 @@ export type StatsLaunchCadence = {
   launchesPerYear: LaunchPerYear[]
   mostLaunchesInYear: LaunchPerYear
   launchGoal2026: { planned: number; completed: number; rate: number }
+  /** Tentatives non listées dans le tableau annuel. */
+  unlistedAttempts: number
+  /** Succès non listés dans le tableau annuel. */
+  unlistedSuccesses: number
+  /** @deprecated Écart « tentatives totales vs succès listés » (alias). */
+  unlistedLaunches: number
   // Alias canoniques DÉRIVÉS par normalizeStats() (voir statsContract.ts).
   // L'API brute ne les envoie pas : ne jamais les lire sur un payload brut.
   total: number
@@ -217,10 +223,13 @@ export type StatsBooster = {
   block5Attempts: number
   block5Rate: number
   block5Reflown: number
-  fastestTurnaround: StatsBoosterFastestTurnaround
-  fastestTurnaroundCapeCanaveral: StatsBoosterFastestTurnaround
-  fastestTurnaroundVandenberg: StatsBoosterFastestTurnaround
-  fastestTurnaroundStarbase: StatsBoosterFastestTurnaround
+  /** Réutilisation booster (B1088) — métrique distincte du pad. */
+  fastestBoosterTurnaround: StatsBoosterFastestTurnaround
+  /** Record global de turnaround de pad. */
+  fastestPadTurnaround: StatsBoosterFastestTurnaround
+  fastestPadTurnaroundCapeCanaveral: StatsBoosterFastestTurnaround
+  fastestPadTurnaroundVandenberg: StatsBoosterFastestTurnaround
+  fastestPadTurnaroundStarbase: StatsBoosterFastestTurnaround
   // Alias canoniques DÉRIVÉS par normalizeStats() (voir statsContract.ts).
   // `active`/`list` sont vides quand la source n'expose pas de fiche booster,
   // `total` = totalAttempts, `recordFlights/recordBooster` = mostFlights.
@@ -239,6 +248,13 @@ export type StatsLandingSite = {
 }
 
 export type StatsLandingSites = Array<StatsLandingSite>
+
+export type StatsLandingSitesScope = {
+  /** Sites dont les atterrissages ne comptent pas comme booster landings Falcon 9. */
+  excludedFromBoosterTotals: string[]
+  /** Tentatives de booster non attribuables à un site listé. */
+  unattributedAttempts: number
+}
 
 export type StatsStarlink = {
   inOrbit: number
@@ -281,10 +297,14 @@ export type Stats = {
   fetchedAt: string
   stale: boolean
   source?: 'spacexnow' | 'api' | 'fallback'
+  /** Source primaire et date des champs non publiés (provenance du payload). */
+  sourceUrl?: string
+  fallbackAsOf?: string
   launchCadence: StatsLaunchCadence
   boosters: StatsBooster
   starlink: StatsStarlink
   landingSites: StatsLandingSites
+  landingSitesScope: StatsLandingSitesScope
   dragons: StatsDragon
   capsules: StatsCapsule
   business: StatsBusiness

@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CacheStore } from './cache-store.js'
 import type { LL2BoosterService } from './ll2-booster-service.js'
 import {
+  assertStatsInvariants,
   BUSINESS_FALLBACK_AS_OF,
   SPACEXNOW_BOOTSTRAP,
   SPACEXNOW_BOOTSTRAP_FETCHED_AT,
+  SPACEXNOW_STATS_URL,
   scrapeSpacexnowStats,
   statsSchema,
   StatsService,
@@ -121,12 +123,16 @@ describe('scrapeSpacexnowStats with the real HTML fixture', () => {
     expect(stats.launchCadence.mostSuccessive).toBe(355)
     expect(stats.launchCadence.currentSuccessive).toBe(355)
     expect(stats.launchCadence.launchGoal2026).toEqual({
+      target: 145,
+      achieved: 130,
       planned: 145,
       completed: 130,
       rate: 89.66,
     })
     expect(stats.launchCadence.launchesPerYear.find((entry) => entry.year === 2026)).toEqual({
       year: 2026,
+      attempts: 130,
+      successes: 130,
       planned: 130,
       completed: 130,
       rate: 100,
@@ -141,8 +147,20 @@ describe('scrapeSpacexnowStats with the real HTML fixture', () => {
     expect(stats.boosters.block5Rate).toBe(99.1)
     expect(stats.boosters.block5Reflown).toBe(629)
     expect(stats.boosters.mostFlights).toEqual({ booster: 'B1067', flights: 37 })
-    expect(stats.boosters.fastestTurnaround.duration).toBe('9 days, 3 hours')
-    expect(stats.boosters.fastestTurnaround.booster).toBe('B1088')
+    // Deux métriques distinctes, désormais sans ambiguïté.
+    expect(stats.boosters.fastestBoosterTurnaround.duration).toBe('9 days, 3 hours')
+    expect(stats.boosters.fastestBoosterTurnaround.booster).toBe('B1088')
+    expect(stats.boosters.fastestPadTurnaround.duration).toBe('38 minutes, 31 seconds')
+    expect(stats.boosters.fastestPadTurnaroundCapeCanaveral.duration).toBe('1 day, 21 hours')
+
+    // Deux natures distinctes : 6 tentatives non listées et 3 succès non listés
+    // (l'ancien « 15 » mélangeait les deux).
+    expect(stats.launchCadence.unlistedAttempts).toBe(6)
+    expect(stats.launchCadence.unlistedSuccesses).toBe(3)
+    expect(stats.landingSitesScope).toEqual({
+      excludedFromBoosterTotals: ['Catch'],
+      unattributedAttempts: 10,
+    })
 
     expect(stats.starlink.inOrbit).toBe(11190)
     expect(stats.starlink.starlinkLaunches).toBe(432)
@@ -160,7 +178,7 @@ describe('scrapeSpacexnowStats with the real HTML fixture', () => {
       { site: 'ASOG', landed: 168, attempts: 169, rate: 99.41 },
       { site: 'JRTI', landed: 156, attempts: 159, rate: 98.11 },
       { site: 'OCISLY', landed: 237, attempts: 245, rate: 96.73 },
-      { site: 'Catch', landed: 4, attempts: 6, rate: 67 },
+      { site: 'Catch', landed: 4, attempts: 6, rate: 66.67 },
     ])
 
     expect(stats.capsules).toEqual({
@@ -179,7 +197,17 @@ describe('scrapeSpacexnowStats with the real HTML fixture', () => {
       crewInOrbit: 4,
       crewFlownTotal: 78,
     })
-    expect(stats.fallbackAsOf).toBe(BUSINESS_FALLBACK_AS_OF)
+    // Un payload live ne porte jamais de fallbackAsOf (réservé aux stale).
+    expect(stats.fallbackAsOf).toBeUndefined()
+    expect(Object.hasOwn(JSON.parse(JSON.stringify(stats)), 'fallbackAsOf')).toBe(false)
+    expect(stats.sourceUrl).toBe(SPACEXNOW_STATS_URL)
+    expect(stats.business).toEqual({
+      revenue2025: expect.stringContaining('18 674 M$'),
+      valuation: expect.stringContaining('12/06/2026'),
+      employees: expect.stringContaining('22 000'),
+      starlinkSubscribers: expect.stringContaining('13,6 M'),
+      starlinkRevenue: expect.stringContaining('11 387 M$'),
+    })
     expect(statsSchema.safeParse(stats).success).toBe(true)
   })
 
@@ -268,5 +296,70 @@ describe('StatsService', () => {
     await service.getStats()
     expect(fetchImpl).toHaveBeenCalledTimes(1)
     expect(service.getRetryAt()).not.toBeNull()
+  })
+})
+
+describe('assertStatsInvariants — garde-fou du payload /api/stats', () => {
+  const clone = () => structuredClone(SPACEXNOW_BOOTSTRAP)
+
+  it('accepte le snapshot de secours et le snapshot live', async () => {
+    expect(() => assertStatsInvariants(SPACEXNOW_BOOTSTRAP)).not.toThrow()
+    const live = await scrapeSpacexnowStats(fixtureFetch(), () => NOW)
+    expect(() => assertStatsInvariants(live)).not.toThrow()
+  })
+
+  it('rejette une série en cours plus longue que le record historique', () => {
+    const bad = clone()
+    bad.launchCadence.currentSuccessive = bad.launchCadence.mostSuccessive + 1
+    expect(() => assertStatsInvariants(bad)).toThrow(/currentSuccessive/)
+  })
+
+  it('rejette un taux recopié d’un autre bloc', () => {
+    const bad = clone()
+    bad.launchCadence.mostLaunchesInYear.rate = bad.launchCadence.launchGoal2026.rate // 76.55
+    expect(() => assertStatsInvariants(bad)).toThrow(/mostLaunchesInYear\.rate/)
+  })
+
+  it('rejette un record annuel qui n’est pas dérivé de launchesPerYear', () => {
+    const bad = clone()
+    bad.launchCadence.mostLaunchesInYear.attempts = 145 // valeur de launchGoal2026
+    expect(() => assertStatsInvariants(bad)).toThrow(/mostLaunchesInYear doit être dérivé/)
+  })
+
+  it('rejette une somme par année qui n’égale pas le total', () => {
+    const bad = clone()
+    bad.launchCadence.unlistedAttempts = 0 // 6 tentatives non expliquées
+    expect(() => assertStatsInvariants(bad)).toThrow(/tentatives non listées/)
+  })
+
+  it('rejette des succès non listés incohérents', () => {
+    const bad = clone()
+    bad.launchCadence.unlistedSuccesses = 0 // 3 succès non expliqués
+    expect(() => assertStatsInvariants(bad)).toThrow(/succès non listés/)
+  })
+
+  it('rejette un fallbackAsOf sur un payload live', () => {
+    const bad = clone()
+    bad.stale = false
+    bad.fallbackAsOf = BUSINESS_FALLBACK_AS_OF
+    expect(() => assertStatsInvariants(bad)).toThrow(/fallbackAsOf interdit sur un payload live/)
+  })
+
+  it('rejette des landingSites incohérents avec les boosters', () => {
+    const bad = clone()
+    bad.landingSitesScope.unattributedAttempts = 0 // 10 tentatives non expliquées
+    expect(() => assertStatsInvariants(bad)).toThrow(/landingSites\.attempts/)
+  })
+
+  it('rejette un record de pad global plus lent qu’un record de site', () => {
+    const bad = clone()
+    bad.boosters.fastestPadTurnaround.duration = '9 days, 3 hours' // record booster, pas pad
+    expect(() => assertStatsInvariants(bad)).toThrow(/record global de pad/)
+  })
+
+  it('rejette un taux hors de [0, 100]', () => {
+    const bad = clone()
+    bad.launchCadence.successRate = 176.55
+    expect(() => assertStatsInvariants(bad)).toThrow(/successRate doit être dans \[0, 100\]/)
   })
 })

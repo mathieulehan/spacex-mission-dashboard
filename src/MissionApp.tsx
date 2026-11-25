@@ -738,7 +738,7 @@ function CacheStatusSection() {
   return (
     <section className="section" id="data-status">
       <SectionHeading
-        index="05"
+        index="06"
         eyebrow="Local persistence"
         title="Data cache status"
         description="Safe operational metadata for the on-disk SQLite cache. Cached payload contents remain server-side."

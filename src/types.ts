@@ -181,7 +181,11 @@ export type StatsLaunchCadence = {
   launchesPerYear: LaunchPerYear[]
   mostLaunchesInYear: LaunchPerYear
   launchGoal2026: { planned: number; completed: number; rate: number }
-  /** Lancements hors du tableau annuel (exclusions explicitement listées). */
+  /** Tentatives non listées dans le tableau annuel. */
+  unlistedAttempts: number
+  /** Succès non listés dans le tableau annuel. */
+  unlistedSuccesses: number
+  /** @deprecated Écart « tentatives totales vs succès listés » (alias). */
   unlistedLaunches: number
   // Alias canoniques DÉRIVÉS par normalizeStats() (voir statsContract.ts).
   // L'API brute ne les envoie pas : ne jamais les lire sur un payload brut.

@@ -63,4 +63,52 @@ describe('normalizeStats — contrat /api/stats ↔ UI', () => {
     broken.landingSites[0] = { site: 'LZ1', landings: 53, rate: 98.15 }
     expect(() => normalizeStats(broken)).toThrow(/landingSites\.0\.landed/)
   })
+
+  it('accepte les noms canoniques du nouveau contrat et garde les alias UI', () => {
+    const canonical = structuredClone(rawStats) as Record<string, unknown>
+    const cadence = canonical.launchCadence as Record<string, unknown>
+    const mapBucket = (entry: Record<string, unknown>): Record<string, unknown> => ({
+      ...entry,
+      attempts: entry.planned,
+      successes: entry.completed,
+      rate: entry.rate,
+    })
+    cadence.launchesPerYear = (cadence.launchesPerYear as Record<string, unknown>[]).map(mapBucket)
+    cadence.mostLaunchesInYear = mapBucket(cadence.mostLaunchesInYear as Record<string, unknown>)
+    const goal = cadence.launchGoal2026 as Record<string, unknown>
+    cadence.launchGoal2026 = {
+      ...goal,
+      target: goal.planned,
+      achieved: goal.completed,
+    }
+    cadence.unlistedAttempts = 6
+    cadence.unlistedSuccesses = 3
+    delete cadence.unlistedLaunches
+
+    const stats = normalizeStats(canonical)
+    expect(stats.launchCadence.thisYear).toBe(111)
+    expect(stats.launchCadence.launchesPerYear[0]).toMatchObject({ planned: 111, completed: 111 })
+    expect(stats.launchCadence.launchGoal2026).toMatchObject({
+      planned: 145,
+      completed: 111,
+      rate: 76.55,
+    })
+    expect(stats.launchCadence.unlistedAttempts).toBe(6)
+    expect(stats.launchCadence.unlistedSuccesses).toBe(3)
+    // Alias historique = tentatives non listées + échecs des années listées.
+    expect(stats.launchCadence.unlistedLaunches).toBe(15)
+  })
+
+  it('donne priorité aux noms canoniques sur les alias ambigus', () => {
+    const mixed = structuredClone(rawStats) as Record<string, unknown>
+    const cadence = mixed.launchCadence as Record<string, unknown>
+    const years = cadence.launchesPerYear as Record<string, unknown>[]
+    years[0] = { ...years[0], attempts: 111, successes: 111, planned: 999, completed: 999 }
+    const goal = cadence.launchGoal2026 as Record<string, unknown>
+    cadence.launchGoal2026 = { ...goal, target: 145, achieved: 111, planned: -1, completed: -1 }
+
+    const stats = normalizeStats(mixed)
+    expect(stats.launchCadence.thisYear).toBe(111)
+    expect(stats.launchCadence.launchGoal2026).toMatchObject({ planned: 145, completed: 111 })
+  })
 })

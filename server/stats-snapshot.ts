@@ -9,8 +9,13 @@
 
 export const SPACEXNOW_STATS_URL = 'https://spacexnow.com/stats'
 export const SPACEXNOW_BOOTSTRAP_FETCHED_AT = '2026-09-20T12:00:00.000Z'
-/** Date des chiffres business, non publiés par spacexnow.com. */
-export const BUSINESS_FALLBACK_AS_OF = '2025-01-01T00:00:00.000Z'
+/**
+ * Date de référence des champs BUSINESS (non publiés par spacexnow.com).
+ * Valeurs auditées : abonnés au 30/09/2026 (10-Q), revenu/employés aux dates
+ * indiquées dans chaque chaîne (424B4). Chaque valeur porte sa propre date :
+ * ce champ est la date du PLUS RÉCENT des champs, pas une date « live ».
+ */
+export const BUSINESS_FALLBACK_AS_OF = '2026-09-30T00:00:00.000Z'
 
 // ---------------------------------------------------------------------------
 // Modèle — un seul contrat, partagé par toutes les couches.
@@ -18,9 +23,25 @@ export const BUSINESS_FALLBACK_AS_OF = '2025-01-01T00:00:00.000Z'
 
 export type LaunchPerYear = {
   year: number
-  planned: number
-  completed: number
+  /** Noms canoniques : tentatives de l'année, succès de l'année. */
+  attempts: number
+  successes: number
   rate: number
+  /** @deprecated Alias de compatibilité de `attempts` (une version). */
+  planned: number
+  /** @deprecated Alias de compatibilité de `successes` (une version). */
+  completed: number
+}
+
+/** Objectif annuel : `target` est la CIBLE, `achieved` le RÉALISÉ. */
+export type LaunchGoal = {
+  target: number
+  achieved: number
+  rate: number
+  /** @deprecated Alias de compatibilité de `target` (une version). */
+  planned: number
+  /** @deprecated Alias de compatibilité de `achieved` (une version). */
+  completed: number
 }
 
 export type Turnaround = {
@@ -106,9 +127,11 @@ export type LaunchCadenceStats = {
   currentSuccessive: number
   launchesPerYear: LaunchPerYear[]
   mostLaunchesInYear: LaunchPerYear
-  launchGoal2026: { planned: number; completed: number; rate: number }
-  /** Lancements absents du tableau « Launches Per Year » (années non listées). */
-  unlistedLaunches: number
+  launchGoal2026: LaunchGoal
+  /** Tentatives absentes du tableau annuel (total − Σ tentatives listées). */
+  unlistedAttempts: number
+  /** Succès absents du tableau annuel (succès − Σ succès listés). */
+  unlistedSuccesses: number
 }
 
 export type LandingSitesScope = {
@@ -123,8 +146,8 @@ export type SpaceXNowStats = {
   stale: boolean
   source: 'spacexnow' | 'fallback'
   sourceUrl: string
-  /** Date des champs non publiés par la source (business), jamais du live. */
-  fallbackAsOf: string
+  /** Présent UNIQUEMENT sur un payload `stale` : date des champs non live. */
+  fallbackAsOf?: string
   launchCadence: LaunchCadenceStats
   boosters: BoosterStats
   starlink: StarlinkStats
@@ -146,6 +169,54 @@ export function round2(value: number): number {
 /** Taux en pourcentage, TOUJOURS calculé depuis les compteurs, arrondi à 2 décimales. */
 export function rateOf(success: number, total: number): number {
   return total > 0 ? round2((success / total) * 100) : 0
+}
+
+type YearBucketInput = {
+  year: number
+  attempts?: number
+  successes?: number
+  /** @deprecated alias lu pour les anciens snapshots. */
+  planned?: number
+  /** @deprecated alias lu pour les anciens snapshots. */
+  completed?: number
+  rate?: number
+}
+
+/** Bucket annuel : `planned`/`completed` ne sont que des alias de compatibilité. */
+export function makeYearBucket(input: YearBucketInput): LaunchPerYear {
+  const attempts = input.attempts ?? input.planned ?? 0
+  const successes = input.successes ?? input.completed ?? 0
+  return {
+    year: input.year,
+    attempts,
+    successes,
+    rate: rateOf(successes, attempts),
+    planned: attempts,
+    completed: successes,
+  }
+}
+
+type LaunchGoalInput = {
+  target?: number
+  achieved?: number
+  /** @deprecated alias lu pour les anciens snapshots. */
+  planned?: number
+  /** @deprecated alias lu pour les anciens snapshots. */
+  completed?: number
+  rate?: number
+}
+
+/** Objectif : `target` = CIBLE (145), `achieved` = RÉALISÉ (130). */
+export function makeLaunchGoal(input: LaunchGoalInput): LaunchGoal {
+  const target = input.target ?? input.planned ?? 0
+  const achieved = input.achieved ?? input.completed ?? 0
+  return {
+    target,
+    achieved,
+    rate: rateOf(achieved, target),
+    planned: target,
+    completed: achieved,
+  }
 }
 
 /** Durée textuelle → minutes, pour comparer des records de même nature. */
@@ -176,21 +247,24 @@ function emptyTurnaround(): Turnaround {
  * le seul endroit où un taux ou un agrégat peut être produit.
  */
 export function finalizeStats(input: SpaceXNowStats): SpaceXNowStats {
-  const launchesPerYear = input.launchCadence.launchesPerYear.map((entry) => ({
-    year: entry.year,
-    planned: entry.planned,
-    completed: entry.completed,
-    rate: rateOf(entry.completed, entry.planned),
-  }))
+  const launchesPerYear = input.launchCadence.launchesPerYear.map((entry) =>
+    makeYearBucket(entry),
+  )
   const bestYear = launchesPerYear.reduce<LaunchPerYear>(
-    (best, entry) => (entry.completed > best.completed ? entry : best),
+    (best, entry) => (entry.successes > best.successes ? entry : best),
     launchesPerYear[0] ?? input.launchCadence.mostLaunchesInYear,
   )
   // Copie explicite : le record ne doit pas partager sa référence avec la
   // collection annuelle (sinon une mutation locale fausse les invariants).
-  const mostLaunchesInYear: LaunchPerYear = { ...bestYear }
+  const mostLaunchesInYear: LaunchPerYear = makeYearBucket(bestYear)
   const totalLaunches = input.launchCadence.totalLaunches
-  const unlistedLaunches = totalLaunches - launchesPerYear.reduce((sum, entry) => sum + entry.completed, 0)
+  const successfulLaunches = input.launchCadence.successfulLaunches
+  const listedAttempts = launchesPerYear.reduce((sum, entry) => sum + entry.attempts, 0)
+  const listedSuccesses = launchesPerYear.reduce((sum, entry) => sum + entry.successes, 0)
+  // Deux natures distinctes : 6 tentatives non listées et 3 succès non listés.
+  // L'ancien « unlistedLaunches = 15 » mélangeait les deux (6 + 9 échecs).
+  const unlistedAttempts = totalLaunches - listedAttempts
+  const unlistedSuccesses = successfulLaunches - listedSuccesses
 
   const boosters: BoosterStats = {
     ...input.boosters,
@@ -216,18 +290,19 @@ export function finalizeStats(input: SpaceXNowStats): SpaceXNowStats {
   return {
     ...input,
     sourceUrl: input.sourceUrl || SPACEXNOW_STATS_URL,
+    // Un payload live ne porte JAMAIS de fallbackAsOf : ce champ ne qualifie
+    // que les champs non live d'un instantané `stale`.
+    fallbackAsOf: input.stale ? (input.fallbackAsOf ?? BUSINESS_FALLBACK_AS_OF) : undefined,
     launchCadence: {
       ...input.launchCadence,
-      successfulLaunches: input.launchCadence.successfulLaunches,
-      failedLaunches: Math.max(0, totalLaunches - input.launchCadence.successfulLaunches),
-      successRate: rateOf(input.launchCadence.successfulLaunches, totalLaunches),
+      successfulLaunches,
+      failedLaunches: Math.max(0, totalLaunches - successfulLaunches),
+      successRate: rateOf(successfulLaunches, totalLaunches),
       launchesPerYear,
       mostLaunchesInYear,
-      launchGoal2026: {
-        ...input.launchCadence.launchGoal2026,
-        rate: rateOf(input.launchCadence.launchGoal2026.completed, input.launchCadence.launchGoal2026.planned),
-      },
-      unlistedLaunches,
+      launchGoal2026: makeLaunchGoal(input.launchCadence.launchGoal2026),
+      unlistedAttempts,
+      unlistedSuccesses,
     },
     boosters,
     starlink: {
@@ -271,38 +346,53 @@ export function assertStatsInvariants(input: SpaceXNowStats): void {
   )
   validRate(cadence.successRate, cadence.successfulLaunches, cadence.totalLaunches, 'successRate')
   cadence.launchesPerYear.forEach((entry, index) => {
-    check(entry.planned >= 0 && entry.completed >= 0 && entry.completed <= entry.planned, `launchesPerYear[${index}] incohérent`)
-    validRate(entry.rate, entry.completed, entry.planned, `launchesPerYear[${index}].rate`)
+    check(
+      entry.attempts >= 0 && entry.successes >= 0 && entry.successes <= entry.attempts,
+      `launchesPerYear[${index}] incohérent`,
+    )
+    validRate(entry.rate, entry.successes, entry.attempts, `launchesPerYear[${index}].rate`)
   })
   validRate(
     cadence.mostLaunchesInYear.rate,
-    cadence.mostLaunchesInYear.completed,
-    cadence.mostLaunchesInYear.planned,
+    cadence.mostLaunchesInYear.successes,
+    cadence.mostLaunchesInYear.attempts,
     'mostLaunchesInYear.rate',
   )
   const bestYear = cadence.launchesPerYear.reduce<LaunchPerYear | null>(
-    (best, entry) => (!best || entry.completed > best.completed ? entry : best),
+    (best, entry) => (!best || entry.successes > best.successes ? entry : best),
     null,
   )
   if (bestYear) {
     check(
-      cadence.mostLaunchesInYear.completed === bestYear.completed &&
-        cadence.mostLaunchesInYear.planned === bestYear.planned,
+      cadence.mostLaunchesInYear.successes === bestYear.successes &&
+        cadence.mostLaunchesInYear.attempts === bestYear.attempts,
       'mostLaunchesInYear doit être dérivé de launchesPerYear',
     )
   }
   validRate(
     cadence.launchGoal2026.rate,
-    cadence.launchGoal2026.completed,
-    cadence.launchGoal2026.planned,
+    cadence.launchGoal2026.achieved,
+    cadence.launchGoal2026.target,
     'launchGoal2026.rate',
   )
-  const listed = cadence.launchesPerYear.reduce((sum, entry) => sum + entry.completed, 0)
+  const listedAttempts = cadence.launchesPerYear.reduce((sum, entry) => sum + entry.attempts, 0)
+  const listedSuccesses = cadence.launchesPerYear.reduce((sum, entry) => sum + entry.successes, 0)
   check(
-    listed + cadence.unlistedLaunches === cadence.totalLaunches,
-    `somme(par année) + exclusions (${listed} + ${cadence.unlistedLaunches}) != total (${cadence.totalLaunches})`,
+    listedAttempts + cadence.unlistedAttempts === cadence.totalLaunches,
+    `somme(par année) + tentatives non listées (${listedAttempts} + ${cadence.unlistedAttempts}) != total (${cadence.totalLaunches})`,
   )
-  check(cadence.unlistedLaunches >= 0, 'unlistedLaunches doit être >= 0')
+  check(
+    listedSuccesses + cadence.unlistedSuccesses === cadence.successfulLaunches,
+    `somme(par année) + succès non listés (${listedSuccesses} + ${cadence.unlistedSuccesses}) != succès (${cadence.successfulLaunches})`,
+  )
+  check(
+    cadence.unlistedAttempts >= 0 && cadence.unlistedSuccesses >= 0,
+    'unlistedAttempts / unlistedSuccesses doivent être >= 0',
+  )
+  check(
+    input.stale || input.fallbackAsOf === undefined,
+    'fallbackAsOf interdit sur un payload live (stale:false)',
+  )
 
   const boosters = input.boosters
   check(boosters.totalLanded >= 0 && boosters.totalLanded <= boosters.totalAttempts, 'boosters.totalLanded hors de [0, totalAttempts]')
@@ -368,6 +458,13 @@ const capeCanaveralPad: Turnaround = {
   secondFlight: 'Starlink Group 6-98 (Jan 14 2026)',
 }
 
+/** Record global de pad : « Fastest » de spacexnow, pas le record booster. */
+const globalPadRecord: Turnaround = {
+  duration: '38 minutes, 31 seconds',
+  firstFlight: 'Globalstar 2-R Launch 1 (Aug 16 2026)',
+  secondFlight: 'USSF-366 (Aug 16 2026)',
+}
+
 const rawBootstrap: SpaceXNowStats = {
   fetchedAt: SPACEXNOW_BOOTSTRAP_FETCHED_AT,
   stale: true,
@@ -383,28 +480,29 @@ const rawBootstrap: SpaceXNowStats = {
     mostSuccessive: 335,
     currentSuccessive: 335,
     launchesPerYear: [
-      { year: 2026, planned: 111, completed: 111, rate: 0 },
-      { year: 2025, planned: 170, completed: 167, rate: 0 },
-      { year: 2024, planned: 138, completed: 136, rate: 0 },
-      { year: 2023, planned: 98, completed: 96, rate: 0 },
-      { year: 2022, planned: 61, completed: 61, rate: 0 },
-      { year: 2021, planned: 31, completed: 31, rate: 0 },
-      { year: 2020, planned: 25, completed: 25, rate: 0 },
-      { year: 2019, planned: 13, completed: 13, rate: 0 },
-      { year: 2018, planned: 21, completed: 21, rate: 0 },
-      { year: 2017, planned: 18, completed: 18, rate: 0 },
-      { year: 2016, planned: 9, completed: 8, rate: 0 },
-      { year: 2015, planned: 7, completed: 6, rate: 0 },
-      { year: 2014, planned: 6, completed: 6, rate: 0 },
-      { year: 2013, planned: 3, completed: 3, rate: 0 },
-      { year: 2012, planned: 2, completed: 2, rate: 0 },
-      { year: 2010, planned: 2, completed: 2, rate: 0 },
+      makeYearBucket({ year: 2026, attempts: 111, successes: 111 }),
+      makeYearBucket({ year: 2025, attempts: 170, successes: 167 }),
+      makeYearBucket({ year: 2024, attempts: 138, successes: 136 }),
+      makeYearBucket({ year: 2023, attempts: 98, successes: 96 }),
+      makeYearBucket({ year: 2022, attempts: 61, successes: 61 }),
+      makeYearBucket({ year: 2021, attempts: 31, successes: 31 }),
+      makeYearBucket({ year: 2020, attempts: 25, successes: 25 }),
+      makeYearBucket({ year: 2019, attempts: 13, successes: 13 }),
+      makeYearBucket({ year: 2018, attempts: 21, successes: 21 }),
+      makeYearBucket({ year: 2017, attempts: 18, successes: 18 }),
+      makeYearBucket({ year: 2016, attempts: 9, successes: 8 }),
+      makeYearBucket({ year: 2015, attempts: 7, successes: 6 }),
+      makeYearBucket({ year: 2014, attempts: 6, successes: 6 }),
+      makeYearBucket({ year: 2013, attempts: 3, successes: 3 }),
+      makeYearBucket({ year: 2012, attempts: 2, successes: 2 }),
+      makeYearBucket({ year: 2010, attempts: 2, successes: 2 }),
     ],
     // Dérivé de launchesPerYear (2025 : 167/170 = 98.24), jamais copié de
     // launchGoal2026 (111/145 = 76.55).
-    mostLaunchesInYear: { year: 2025, planned: 170, completed: 167, rate: 0 },
-    launchGoal2026: { planned: 145, completed: 111, rate: 0 },
-    unlistedLaunches: 0,
+    mostLaunchesInYear: makeYearBucket({ year: 2025, attempts: 170, successes: 167 }),
+    launchGoal2026: makeLaunchGoal({ target: 145, achieved: 111 }),
+    unlistedAttempts: 0,
+    unlistedSuccesses: 0,
   },
   boosters: {
     totalLanded: 663,
@@ -422,8 +520,9 @@ const rawBootstrap: SpaceXNowStats = {
       firstFlight: 'SPHEREx & PUNCH (Mar 12 2025)',
       secondFlight: 'NROL-57 (Mar 21 2025)',
     },
-    // Record global de pad = minimum des records de pad connus du snapshot.
-    fastestPadTurnaround: capeCanaveralPad,
+    // Record global de pad = ligne « Fastest » (38 min 31 s), pas le record
+    // du site de Cape Canaveral et pas le record booster (9 j 3 h).
+    fastestPadTurnaround: globalPadRecord,
     fastestPadTurnaroundCapeCanaveral: capeCanaveralPad,
     fastestPadTurnaroundVandenberg: {
       duration: '2 days, 7 hours',
@@ -468,11 +567,11 @@ const rawBootstrap: SpaceXNowStats = {
   },
   capsules: { landed: 56, attempts: 57, rate: 0, reflown: 33 },
   business: {
-    revenue2025: '12.5B USD (estimated)',
-    valuation: '350B USD (private, 2024)',
-    employees: '~10,000 (estimated)',
-    starlinkSubscribers: '~4M (estimated, Q1 2025)',
-    starlinkRevenue: '7.4B USD (2024, est.)',
+    revenue2025: '18 674 M$ (FY2025, consolidé audité — SEC 424B4, retraité xAI/X)',
+    valuation: 'SPCX cotée depuis le 12/06/2026 (prix IPO 135 $/action — SEC 424B4)',
+    employees: '> 22 000 (31/03/2026 — SEC 424B4)',
+    starlinkSubscribers: '13,6 M (30/09/2026 — SEC 10-Q, lignes consommateur)',
+    starlinkRevenue: '11 387 M$ (FY2025, segment Connectivity — SEC 424B4)',
   },
 }
 

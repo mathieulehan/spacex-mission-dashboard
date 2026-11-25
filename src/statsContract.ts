@@ -15,8 +15,23 @@ import type { LaunchPerYear, Stats } from './types'
 
 const finite = z.number().finite()
 
+type YearBucketInput = {
+  year?: number
+  attempts?: number
+  successes?: number
+  target?: number
+  achieved?: number
+  /** @deprecated alias lu pour les anciens payloads. */
+  planned?: number
+  /** @deprecated alias lu pour les anciens payloads. */
+  completed?: number
+  rate?: number
+}
+
 const yearBucketSchema = z.object({
   year: finite,
+  attempts: finite.optional(),
+  successes: finite.optional(),
   planned: finite.optional(),
   completed: finite.optional(),
   rate: finite.optional(),
@@ -24,6 +39,8 @@ const yearBucketSchema = z.object({
 
 /** Objectif annuel : pas de `year` dans le payload réel. */
 const goalSchema = z.object({
+  target: finite.optional(),
+  achieved: finite.optional(),
   planned: finite,
   completed: finite,
   rate: finite,
@@ -67,7 +84,10 @@ export const statsApiResponseSchema = z.object({
     launchesPerYear: z.array(yearBucketSchema),
     mostLaunchesInYear: yearBucketSchema.optional(),
     launchGoal2026: goalSchema.optional(),
+    /** @deprecated Remplacé par unlistedAttempts / unlistedSuccesses. */
     unlistedLaunches: finite.optional(),
+    unlistedAttempts: finite.optional(),
+    unlistedSuccesses: finite.optional(),
   }),
 
   boosters: z.object({
@@ -145,19 +165,16 @@ export const statsApiResponseSchema = z.object({
 
 export type StatsApiResponse = z.infer<typeof statsApiResponseSchema>
 
-type PartialBucket = {
-  year?: number
-  planned?: number
-  completed?: number
-  rate?: number
-}
-
-/** complète un bucket partiel sans jamais laisser `undefined` dans l'UI. */
-function toLaunchPerYear(bucket: PartialBucket | undefined, fallbackYear: number): LaunchPerYear {
+/**
+ * Complète un bucket partiel sans jamais laisser `undefined` dans l'UI.
+ * Les noms canoniques (`attempts`/`successes`, `target`/`achieved`) sont lus
+ * en priorité ; `planned`/`completed` ne restent que des alias de compatibilité.
+ */
+function toLaunchPerYear(bucket: YearBucketInput | undefined, fallbackYear: number): LaunchPerYear {
   return {
     year: bucket?.year ?? fallbackYear,
-    planned: bucket?.planned ?? 0,
-    completed: bucket?.completed ?? 0,
+    planned: bucket?.attempts ?? bucket?.target ?? bucket?.planned ?? 0,
+    completed: bucket?.successes ?? bucket?.achieved ?? bucket?.completed ?? 0,
     rate: bucket?.rate ?? 0,
   }
 }
@@ -184,9 +201,21 @@ export function normalizeStats(raw: unknown): Stats {
   const list = payload.boosters.list ?? []
   const active = list.filter((booster) => booster.status === 'active').length
   const b = payload.boosters
-  const listed = payload.launchCadence.launchesPerYear.reduce(
-    (sum, entry) => sum + (entry.completed ?? 0), 0,
+  const listedAttempts = payload.launchCadence.launchesPerYear.reduce(
+    (sum, entry) => sum + (entry.attempts ?? entry.planned ?? 0), 0,
   )
+  const listedSuccesses = payload.launchCadence.launchesPerYear.reduce(
+    (sum, entry) => sum + (entry.successes ?? entry.completed ?? 0), 0,
+  )
+  const unlistedAttempts =
+    payload.launchCadence.unlistedAttempts ??
+    Math.max(0, payload.launchCadence.totalLaunches - listedAttempts)
+  const unlistedSuccesses =
+    payload.launchCadence.unlistedSuccesses ??
+    Math.max(0, payload.launchCadence.successfulLaunches - listedSuccesses)
+  // Alias historique : « écart tentatives totales vs succès listés ».
+  // 15 = 6 tentatives non listées + 9 échecs des années listées.
+  const unlistedLaunches = unlistedAttempts + Math.max(0, listedAttempts - listedSuccesses)
 
   return {
     fetchedAt: payload.fetchedAt,
@@ -208,15 +237,17 @@ export function normalizeStats(raw: unknown): Stats {
         currentYear,
       ),
       launchGoal2026: toLaunchPerYear(payload.launchCadence.launchGoal2026, currentYear),
-      unlistedLaunches:
-        payload.launchCadence.unlistedLaunches ??
-        Math.max(0, payload.launchCadence.totalLaunches - listed),
+      unlistedLaunches,
+      unlistedAttempts,
+      unlistedSuccesses,
       // Alias canoniques dérivés — jamais fournis par l'API brute.
       total: payload.launchCadence.totalLaunches,
       successful: payload.launchCadence.successfulLaunches,
       consecutive: payload.launchCadence.currentSuccessive,
       thisYear:
+        thisYearEntry?.successes ??
         thisYearEntry?.completed ??
+        payload.launchCadence.launchGoal2026?.achieved ??
         payload.launchCadence.launchGoal2026?.completed ??
         0,
     },

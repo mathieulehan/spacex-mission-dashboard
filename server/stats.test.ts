@@ -8,6 +8,7 @@ import {
   BUSINESS_FALLBACK_AS_OF,
   SPACEXNOW_BOOTSTRAP,
   SPACEXNOW_BOOTSTRAP_FETCHED_AT,
+  SPACEXNOW_STATS_URL,
   scrapeSpacexnowStats,
   statsSchema,
   StatsService,
@@ -122,12 +123,16 @@ describe('scrapeSpacexnowStats with the real HTML fixture', () => {
     expect(stats.launchCadence.mostSuccessive).toBe(355)
     expect(stats.launchCadence.currentSuccessive).toBe(355)
     expect(stats.launchCadence.launchGoal2026).toEqual({
+      target: 145,
+      achieved: 130,
       planned: 145,
       completed: 130,
       rate: 89.66,
     })
     expect(stats.launchCadence.launchesPerYear.find((entry) => entry.year === 2026)).toEqual({
       year: 2026,
+      attempts: 130,
+      successes: 130,
       planned: 130,
       completed: 130,
       rate: 100,
@@ -148,9 +153,10 @@ describe('scrapeSpacexnowStats with the real HTML fixture', () => {
     expect(stats.boosters.fastestPadTurnaround.duration).toBe('38 minutes, 31 seconds')
     expect(stats.boosters.fastestPadTurnaroundCapeCanaveral.duration).toBe('1 day, 21 hours')
 
-    // Exclusions explicites : les 15 lancements des années non listées, et
-    // les tentatives de booster non attribuables à un site (Catch = Starship).
-    expect(stats.launchCadence.unlistedLaunches).toBe(15)
+    // Deux natures distinctes : 6 tentatives non listées et 3 succès non listés
+    // (l'ancien « 15 » mélangeait les deux).
+    expect(stats.launchCadence.unlistedAttempts).toBe(6)
+    expect(stats.launchCadence.unlistedSuccesses).toBe(3)
     expect(stats.landingSitesScope).toEqual({
       excludedFromBoosterTotals: ['Catch'],
       unattributedAttempts: 10,
@@ -191,7 +197,17 @@ describe('scrapeSpacexnowStats with the real HTML fixture', () => {
       crewInOrbit: 4,
       crewFlownTotal: 78,
     })
-    expect(stats.fallbackAsOf).toBe(BUSINESS_FALLBACK_AS_OF)
+    // Un payload live ne porte jamais de fallbackAsOf (réservé aux stale).
+    expect(stats.fallbackAsOf).toBeUndefined()
+    expect(Object.hasOwn(JSON.parse(JSON.stringify(stats)), 'fallbackAsOf')).toBe(false)
+    expect(stats.sourceUrl).toBe(SPACEXNOW_STATS_URL)
+    expect(stats.business).toEqual({
+      revenue2025: expect.stringContaining('18 674 M$'),
+      valuation: expect.stringContaining('12/06/2026'),
+      employees: expect.stringContaining('22 000'),
+      starlinkSubscribers: expect.stringContaining('13,6 M'),
+      starlinkRevenue: expect.stringContaining('11 387 M$'),
+    })
     expect(statsSchema.safeParse(stats).success).toBe(true)
   })
 
@@ -306,14 +322,27 @@ describe('assertStatsInvariants — garde-fou du payload /api/stats', () => {
 
   it('rejette un record annuel qui n’est pas dérivé de launchesPerYear', () => {
     const bad = clone()
-    bad.launchCadence.mostLaunchesInYear.planned = 145 // valeur de launchGoal2026
+    bad.launchCadence.mostLaunchesInYear.attempts = 145 // valeur de launchGoal2026
     expect(() => assertStatsInvariants(bad)).toThrow(/mostLaunchesInYear doit être dérivé/)
   })
 
   it('rejette une somme par année qui n’égale pas le total', () => {
     const bad = clone()
-    bad.launchCadence.unlistedLaunches = 0 // 15 lancements non expliqués
-    expect(() => assertStatsInvariants(bad)).toThrow(/somme\(par année\)/)
+    bad.launchCadence.unlistedAttempts = 0 // 6 tentatives non expliquées
+    expect(() => assertStatsInvariants(bad)).toThrow(/tentatives non listées/)
+  })
+
+  it('rejette des succès non listés incohérents', () => {
+    const bad = clone()
+    bad.launchCadence.unlistedSuccesses = 0 // 3 succès non expliqués
+    expect(() => assertStatsInvariants(bad)).toThrow(/succès non listés/)
+  })
+
+  it('rejette un fallbackAsOf sur un payload live', () => {
+    const bad = clone()
+    bad.stale = false
+    bad.fallbackAsOf = BUSINESS_FALLBACK_AS_OF
+    expect(() => assertStatsInvariants(bad)).toThrow(/fallbackAsOf interdit sur un payload live/)
   })
 
   it('rejette des landingSites incohérents avec les boosters', () => {

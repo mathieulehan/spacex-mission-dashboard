@@ -14,8 +14,9 @@ import {
 import {
   assertStatsInvariants,
   finalizeStats,
+  makeLaunchGoal,
+  makeYearBucket,
   SPACEXNOW_BOOTSTRAP,
-  BUSINESS_FALLBACK_AS_OF,
   SPACEXNOW_STATS_URL,
   type BoosterStats,
   type BoosterFastestTurnaround,
@@ -97,7 +98,11 @@ function buildLaunchCadence(
       if (!Number.isInteger(year) || year < 2000) return null
       const fraction = parseFraction(row.value)
       if (!fraction) return null
-      return { year, planned: fraction.total, completed: fraction.success, rate: fraction.rate }
+      return makeYearBucket({
+        year,
+        attempts: fraction.total,
+        successes: fraction.success,
+      })
     })
     .filter((entry): entry is LaunchPerYear => entry !== null)
     .sort((a, b) => b.year - a.year)
@@ -132,15 +137,12 @@ function buildLaunchCadence(
     currentSuccessive: parseNumber(findRow(launchCount, 'Successive')?.value ?? '0'),
     launchesPerYear,
     mostLaunchesInYear: launchesPerYear.reduce((best, entry) =>
-      entry.completed > best.completed ? entry : best,
+      entry.successes > best.successes ? entry : best,
     ),
-    launchGoal2026: {
-      planned: goal.total,
-      completed: goal.success,
-      rate: goal.rate,
-    },
-    // Recalculé par finalizeStats() : total - somme(des années listées).
-    unlistedLaunches: 0,
+    launchGoal2026: makeLaunchGoal({ target: goal.total, achieved: goal.success }),
+    // Recalculés par finalizeStats() : total − Σ tentatives, succès − Σ succès.
+    unlistedAttempts: 0,
+    unlistedSuccesses: 0,
   }
 }
 
@@ -321,9 +323,8 @@ export async function scrapeSpacexnowStats(
       stale: false,
       source: 'spacexnow',
       sourceUrl: SPACEXNOW_STATS_URL,
-      // Les seules valeurs non publiées par la source restent datées et
-      // explicitement marquées comme telles (jamais présentées comme live).
-      fallbackAsOf: BUSINESS_FALLBACK_AS_OF,
+      // Ce champ est nettoyé par finalizeStats() : interdit sur un payload live.
+      fallbackAsOf: undefined,
       launchCadence,
       boosters,
       starlink,
@@ -482,6 +483,18 @@ const landingSitesSchema = z.array(
 
 const launchPerYearSchema = z.object({
   year: z.number(),
+  attempts: z.number(),
+  successes: z.number(),
+  // Alias de compatibilité (une version) : encore émis par le serveur, mais
+  // les consommateurs doivent lire `attempts`/`successes`.
+  planned: z.number(),
+  completed: z.number(),
+  rate: z.number(),
+})
+
+const launchGoalSchema = z.object({
+  target: z.number(),
+  achieved: z.number(),
   planned: z.number(),
   completed: z.number(),
   rate: z.number(),
@@ -496,12 +509,9 @@ const launchCadenceSchema = z.object({
   currentSuccessive: z.number(),
   launchesPerYear: z.array(launchPerYearSchema),
   mostLaunchesInYear: launchPerYearSchema,
-  launchGoal2026: z.object({
-    planned: z.number(),
-    completed: z.number(),
-    rate: z.number(),
-  }),
-  unlistedLaunches: z.number(),
+  launchGoal2026: launchGoalSchema,
+  unlistedAttempts: z.number(),
+  unlistedSuccesses: z.number(),
 })
 
 const boosterSchema = z.object({
@@ -570,7 +580,7 @@ export const statsSchema = z.object({
   stale: z.boolean(),
   source: z.enum(['spacexnow', 'fallback']),
   sourceUrl: z.string(),
-  fallbackAsOf: z.string(),
+  fallbackAsOf: z.string().optional(),
   launchCadence: launchCadenceSchema,
   boosters: boosterSchema,
   starlink: starlinkSchema,

@@ -412,6 +412,12 @@ export function StatsDashboard() {
   const yearly = [...(cadence.launchesPerYear ?? [])].sort((a, b) => a.year - b.year);
   // `Math.max(...[])` vaut -Infinity : borne basse à 1, même sans données.
   const maxYear = Math.max(1, ...yearly.map(d => d.completed ?? d.planned ?? 0));
+  // Objectif annuel : « 130 / 145 (89,66 %) » — le taux vient du contrat, pas
+  // d'un recalcul approximatif, et reste formaté en fr-FR comme les autres.
+  const goal = cadence.launchGoal2026;
+  const goalLabel = goal && goal.planned > 0
+    ? `${formatStatNumber(goal.completed, 0)} / ${formatStatNumber(goal.planned, 0)} (${formatRate(goal.rate)} %)`
+    : `sur ${new Date().getFullYear()}`;
 
   const description =
     view === 'loading'
@@ -505,7 +511,7 @@ export function StatsDashboard() {
             <StatCard
               label="Lancements cette année"
               value={cadence.thisYear}
-              sublabel={`sur ${new Date().getFullYear()}`}
+              sublabel={goalLabel}
               color="#c5a0ff"
             />
           </div>

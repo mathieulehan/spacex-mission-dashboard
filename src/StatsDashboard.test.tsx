@@ -73,6 +73,18 @@ describe('StatsDashboard ↔ payload réel de /api/stats', () => {
     expect(text).not.toMatch(/NaN|undefined|Infinity/)
   })
 
+  it('affiche l’objectif annuel au format « 130 / 145 (89,66 %) »', async () => {
+    const modified = structuredClone(rawStats) as Record<string, any>
+    modified.launchCadence.launchGoal2026 = { planned: 145, completed: 130, rate: 89.66 }
+    payload = modified
+
+    renderDashboard()
+
+    expect(await screen.findByText('98,34%')).toBeInTheDocument()
+    expect(statsText()).toContain('130 / 145 (89,66 %)')
+    expect(statsText()).not.toMatch(/NaN|undefined|Infinity/)
+  })
+
   it('affiche le compte et le taux des sites, et les cartes boosters sans champ vide', async () => {
     renderDashboard()
 

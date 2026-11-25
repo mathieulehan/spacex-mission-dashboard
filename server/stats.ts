@@ -1,6 +1,6 @@
 import type { CacheStore } from './cache-store.js'
 import { UpstreamError } from './upstream.js'
-import { LL2BoosterService } from './ll2-booster-service.js'
+import { LL2BoosterService, boosterListItemSchema } from './ll2-booster-service.js'
 import {
   findRow,
   findSection,
@@ -426,7 +426,9 @@ export class StatsService {
             reason: 'LL2 booster snapshot is stale; keeping live spacexnow boosters',
           }))
         } else {
-          stats.boosters = ll2.value
+          // Le roster LL2 remplace les agrégats spacexnow ; on propagera
+          // explicitement `list` pour qu'il survive au cache Zod /api/stats.
+          stats.boosters = { ...ll2.value, list: ll2.value.list }
         }
       } catch (ll2Error) {
         console.warn(JSON.stringify({
@@ -532,6 +534,7 @@ const boosterSchema = z.object({
   fastestPadTurnaroundCapeCanaveral: turnaroundSchema,
   fastestPadTurnaroundVandenberg: turnaroundSchema,
   fastestPadTurnaroundStarbase: turnaroundSchema,
+  list: z.array(boosterListItemSchema).optional(),
 })
 
 const starlinkSchema = z.object({

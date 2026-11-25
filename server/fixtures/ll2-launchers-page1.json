@@ -1,0 +1,82 @@
+{
+  "count": 197,
+  "next": "https://ll.thespacedevs.com/2.2.0/launcher/?mode=detailed&limit=100&offset=100",
+  "previous": null,
+  "results": [
+    {
+      "id": 1067,
+      "serial_number": "B1067",
+      "status": "Active",
+      "flights": 37,
+      "successful_landings": 36,
+      "attempted_landings": 37,
+      "last_launch_date": "2026-11-20T12:00:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9",
+        "full_name": "Falcon 9 Block 5",
+        "variant": "Block 5"
+      }
+    },
+    {
+      "id": 1061,
+      "serial_number": "B1061",
+      "status": "Lost",
+      "flights": 23,
+      "successful_landings": 23,
+      "attempted_landings": 23,
+      "last_launch_date": "2026-02-15T09:30:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9",
+        "full_name": "Falcon 9 Block 5",
+        "variant": "Block 5"
+      }
+    },
+    {
+      "id": 900,
+      "serial_number": "FH-1",
+      "status": "Retired",
+      "flights": 3,
+      "successful_landings": 0,
+      "attempted_landings": 0,
+      "last_launch_date": "2019-06-25T14:00:00Z",
+      "launcher_config": {
+        "id": 165,
+        "name": "Falcon Heavy",
+        "full_name": "Falcon Heavy",
+        "variant": null
+      }
+    },
+    {
+      "id": 1099,
+      "serial_number": "B1099",
+      "status": "Active",
+      "flights": 12,
+      "successful_landings": 12,
+      "attempted_landings": 12,
+      "last_launch_date": "2026-11-21T08:00:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9 Block 5",
+        "full_name": "Falcon 9 Block 5",
+        "variant": "Block 5"
+      }
+    },
+    {
+      "id": 1098,
+      "serial_number": "  ",
+      "status": "Active",
+      "flights": 2,
+      "successful_landings": 2,
+      "attempted_landings": 2,
+      "last_launch_date": "2026-11-19T08:00:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9",
+        "full_name": "Falcon 9 Block 5",
+        "variant": "Block 5"
+      }
+    }
+  ]
+}

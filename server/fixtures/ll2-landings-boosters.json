@@ -1,0 +1,57 @@
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": "landing-1",
+      "attempt": true,
+      "success": true,
+      "landing_type": { "id": 3, "name": "Sea Landing", "abbrev": "ASDS", "description": "" },
+      "landing_location": { "id": 12, "name": "Of Course I Still Love You", "abbrev": "OCISLY", "successful_landings": 200 },
+      "firststage": {
+        "id": 1,
+        "type": "Booster",
+        "reused": true,
+        "launcher_flight_number": 37,
+        "launcher": {
+          "id": 8,
+          "serial_number": "B1067",
+          "status": "Active",
+          "flights": 37,
+          "successful_landings": 36,
+          "attempted_landings": 37,
+          "last_launch_date": "2026-11-20T12:00:00Z",
+          "first_launch_date": "2020-11-15T00:00:00Z"
+        },
+        "turn_around_time_days": 21.5
+      },
+      "spacecraftflight": null
+    },
+    {
+      "id": "landing-2",
+      "attempt": true,
+      "success": true,
+      "landing_type": { "id": 3, "name": "Sea Landing", "abbrev": "ASDS", "description": "" },
+      "landing_location": { "id": 12, "name": "Of Course I Still Love You", "abbrev": "OCISLY", "successful_landings": 200 },
+      "firststage": {
+        "id": 2,
+        "type": "Booster",
+        "reused": true,
+        "launcher_flight_number": 23,
+        "launcher": {
+          "id": 8,
+          "serial_number": "B1061",
+          "status": "Lost",
+          "flights": 23,
+          "successful_landings": 23,
+          "attempted_landings": 23,
+          "last_launch_date": "2026-02-15T09:30:00Z",
+          "first_launch_date": "2020-05-30T00:00:00Z"
+        },
+        "turn_around_time_days": null
+      },
+      "spacecraftflight": null
+    }
+  ]
+}

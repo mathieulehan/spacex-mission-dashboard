@@ -54,6 +54,18 @@ export type Turnaround = {
 /** Ancien nom conservé comme alias de `Turnaround` pour les imports existants. */
 export type BoosterFastestTurnaround = Turnaround
 
+/** Fiche par booster — même contrat que `boosterListItemSchema` côté UI. */
+export type BoosterListItem = {
+  serialNumber: string
+  type: string
+  flights: number
+  landed: number
+  attempted: number
+  landingRate: number
+  status: 'active' | 'retired' | 'lost'
+  lastFlight: string
+}
+
 export type BoosterStats = {
   totalLanded: number
   totalAttempts: number
@@ -72,6 +84,8 @@ export type BoosterStats = {
   fastestPadTurnaroundCapeCanaveral: Turnaround
   fastestPadTurnaroundVandenberg: Turnaround
   fastestPadTurnaroundStarbase: Turnaround
+  /** Absent de spacexnow : fourni par le roster LL2 quand il est frais. */
+  list?: BoosterListItem[]
 }
 
 export type StarlinkStats = {

@@ -3,6 +3,8 @@ import { UpstreamError } from './upstream.js'
 import {
   SPACEXNOW_BOOTSTRAP,
   SPACEXNOW_BOOTSTRAP_FETCHED_AT,
+  rateOf,
+  type BoosterListItem,
   type BoosterStats,
 } from './stats-snapshot.js'
 
@@ -67,6 +69,10 @@ export class LL2BoosterService {
   private async fetchAndComputeBoosterStats(): Promise<LL2BoosterStats> {
     // Récupérer les landings depuis LL2 (pagination automatique)
     const allLandings = await this.fetchAllLandings()
+
+    // Roster des boosters : endpoint /launcher (2 pages à 100). Le filtre
+    // query launcher_config__id=164 est ignoré en 2.2.0 : on filtre ici.
+    const list = await this.fetchBoosterList()
 
     // Filtrer les landings Falcon 9
     const f9Landings = allLandings.filter((l) => l.firststage?.launcher?.id === 8)
@@ -180,7 +186,42 @@ export class LL2BoosterService {
       fastestPadTurnaroundCapeCanaveral: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaroundCapeCanaveral,
       fastestPadTurnaroundVandenberg: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaroundVandenberg,
       fastestPadTurnaroundStarbase: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaroundStarbase,
+      list,
     }
+  }
+
+  private async fetchBoosterList(): Promise<BoosterListItem[]> {
+    const launchers = await this.fetchAllLaunchers()
+    return launchers
+      .filter((launcher) => launcher.launcher_config?.name === 'Falcon 9')
+      .map(toBoosterListItem)
+      .filter((item): item is BoosterListItem => item !== null)
+  }
+
+  private async fetchAllLaunchers(): Promise<Array<LL2Launcher>> {
+    const allLaunchers: Array<LL2Launcher> = []
+    let next: string | null = `${LL2_BASE_URL}/launcher/?mode=detailed&limit=100`
+
+    while (next) {
+      const response = await this.fetchImpl(next, {
+        headers: { accept: 'application/json' },
+      })
+
+      if (!response.ok) {
+        throw new UpstreamError(
+          `LL2 returned ${response.status}`,
+          502,
+          'LL2_RESPONSE_ERROR',
+          response.status,
+        )
+      }
+
+      const data = (await response.json()) as LL2LaunchersResponse
+      allLaunchers.push(...data.results)
+      next = data.next
+    }
+
+    return allLaunchers
   }
 
   private async fetchAllLandings(): Promise<Array<LL2Landing>> {
@@ -254,7 +295,93 @@ export interface LL2LandingsResponse {
   results: LL2Landing[]
 }
 
+export interface LL2Launcher {
+  id: number
+  serial_number: string | null
+  /** Chaîne ou objet `{ name, abbrev }` selon la version de l'API. */
+  status: unknown
+  flights: number | null
+  successful_landings: number | null
+  attempted_landings: number | null
+  last_launch_date: string | null
+  launcher_config: {
+    id: number
+    name: string
+    full_name: string | null
+    variant: string | null
+  }
+}
+
+export interface LL2LaunchersResponse {
+  count: number
+  next: string | null
+  previous: string | null
+  results: LL2Launcher[]
+}
+
+function statusLabel(status: unknown): string {
+  if (typeof status === 'string') return status
+  if (status && typeof status === 'object') {
+    const candidate = status as { name?: unknown; abbrev?: unknown }
+    if (typeof candidate.name === 'string') return candidate.name
+    if (typeof candidate.abbrev === 'string') return candidate.abbrev
+  }
+  return ''
+}
+
+/** Statuts LL2 → les trois états du contrat UI, sans valeur inattendue. */
+export function mapBoosterStatus(status: unknown): BoosterListItem['status'] {
+  switch (statusLabel(status).trim().toLowerCase()) {
+    case 'active':
+      return 'active'
+    case 'lost':
+    case 'destroyed':
+      return 'lost'
+    default:
+      // retired, expended, scrapped, converted — et tout statut inconnu.
+      return 'retired'
+  }
+}
+
+function countOrZero(value: number | null | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0
+}
+
+/** Un launcher sans numéro de série n'est pas une fiche exploitable. */
+export function toBoosterListItem(launcher: LL2Launcher): BoosterListItem | null {
+  const serialNumber = launcher.serial_number?.trim()
+  if (!serialNumber) return null
+
+  const config = launcher.launcher_config
+  const landed = countOrZero(launcher.successful_landings)
+  const attempted = countOrZero(launcher.attempted_landings)
+
+  return {
+    serialNumber,
+    type: config?.full_name || config?.variant || config?.name || '',
+    flights: countOrZero(launcher.flights),
+    landed,
+    attempted,
+    // Garde-fou : aucun atterrissage tenté ⇒ taux à 0, jamais NaN/Infinity.
+    landingRate: rateOf(landed, attempted),
+    status: mapBoosterStatus(launcher.status),
+    lastFlight: launcher.last_launch_date ?? '',
+  }
+}
+
 import { z } from 'zod'
+
+/** Sous-schéma partagé avec `boosterSchema` dans stats.ts (cache /api/stats). */
+export const boosterListItemSchema = z.object({
+  serialNumber: z.string(),
+  type: z.string(),
+  flights: z.number(),
+  landed: z.number(),
+  attempted: z.number(),
+  landingRate: z.number(),
+  status: z.enum(['active', 'retired', 'lost']),
+  lastFlight: z.string(),
+})
 
 export const ll2BoosterStatsSchema = z.object({
   totalLanded: z.number(),
@@ -296,4 +423,5 @@ export const ll2BoosterStatsSchema = z.object({
     firstFlight: z.string(),
     secondFlight: z.string(),
   }),
+  list: z.array(boosterListItemSchema).optional(),
 })

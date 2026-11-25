@@ -1,0 +1,97 @@
+{
+  "count": 197,
+  "next": null,
+  "previous": "https://ll.thespacedevs.com/2.2.0/launcher/?mode=detailed&limit=100",
+  "results": [
+    {
+      "id": 1058,
+      "serial_number": "B1058",
+      "status": { "name": "Expended", "abbrev": "EXP" },
+      "flights": 19,
+      "successful_landings": 16,
+      "attempted_landings": 19,
+      "last_launch_date": "2024-07-12T22:30:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9",
+        "full_name": "Falcon 9 Block 5",
+        "variant": "Block 5"
+      }
+    },
+    {
+      "id": 1056,
+      "serial_number": "B1056",
+      "status": "Destroyed",
+      "flights": 24,
+      "successful_landings": 0,
+      "attempted_landings": 0,
+      "last_launch_date": "2021-02-25T02:55:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9",
+        "full_name": "Falcon 9 Block 5",
+        "variant": "Block 5"
+      }
+    },
+    {
+      "id": 1047,
+      "serial_number": "B1047",
+      "status": "Scrapped",
+      "flights": 5,
+      "successful_landings": 5,
+      "attempted_landings": 5,
+      "last_launch_date": "2020-12-19T14:00:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9",
+        "full_name": "Falcon 9 Block 5",
+        "variant": "Block 5"
+      }
+    },
+    {
+      "id": 1023,
+      "serial_number": "B1023",
+      "status": "Converted",
+      "flights": 2,
+      "successful_landings": 2,
+      "attempted_landings": 2,
+      "last_launch_date": "2018-07-22T11:50:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9",
+        "full_name": "Falcon 9",
+        "variant": "FT"
+      }
+    },
+    {
+      "id": 1005,
+      "serial_number": "B1005",
+      "status": "Retired",
+      "flights": 2,
+      "successful_landings": 1,
+      "attempted_landings": 2,
+      "last_launch_date": "2018-04-02T20:30:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9",
+        "full_name": null,
+        "variant": "FT"
+      }
+    },
+    {
+      "id": 1004,
+      "serial_number": null,
+      "status": "Active",
+      "flights": 3,
+      "successful_landings": 3,
+      "attempted_landings": 3,
+      "last_launch_date": "2018-01-01T00:00:00Z",
+      "launcher_config": {
+        "id": 164,
+        "name": "Falcon 9",
+        "full_name": "Falcon 9 Block 5",
+        "variant": "Block 5"
+      }
+    }
+  ]
+}

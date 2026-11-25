@@ -19,6 +19,7 @@ import {
   SPACEXNOW_BOOTSTRAP,
   SPACEXNOW_STATS_URL,
   type BoosterStats,
+  type BoosterListItem,
   type BoosterFastestTurnaround,
   type CapsuleStats,
   type DragonStats,
@@ -396,19 +397,50 @@ export class StatsService {
     return { ...value, stale: true }
   }
 
+  /** La liste est greffée sur TOUS les chemins, y compris stale/fallback. */
+  private static withBoosterList(
+    value: SpaceXNowStats,
+    list: BoosterListItem[] | null,
+  ): SpaceXNowStats {
+    return list && list.length > 0
+      ? { ...value, boosters: { ...value.boosters, list } }
+      : value
+  }
+
   async getStats(): Promise<{ value: SpaceXNowStats; stale: boolean }> {
     const cached = await this.cache.get(CACHE_KEY, statsSchema)
+
+    // Roster LL2 : chemin INDÉPENDANT des 19 pages /landings/ et du
+    // withTimeout(5s) ci-dessous. Un 429 sur les landings ne doit jamais
+    // priver /api/stats de boosters.list.
+    const boosterList =
+      (await this.ll2BoosterService.getBoosterList?.()) ?? null
     if (cached && Date.now() - cached.fetchedAt < SPACEXNOW_CACHE_TTL_MS) {
-      return { value: StatsService.verified(cached.value), stale: false }
+      return {
+        value: StatsService.withBoosterList(StatsService.verified(cached.value), boosterList),
+        stale: false,
+      }
     }
 
     // Fenêtre de cooldown : on sert le dernier snapshot réel, jamais une
     // valeur live reconstruite à partir du bootstrap.
     if (Date.now() < this.blockedUntil) {
       if (cached) {
-        return { value: StatsService.asStale(StatsService.verified(cached.value)), stale: true }
+        return {
+          value: StatsService.withBoosterList(
+            StatsService.asStale(StatsService.verified(cached.value)),
+            boosterList,
+          ),
+          stale: true,
+        }
       }
-      return { value: StatsService.asStale(StatsService.verified(SPACEXNOW_BOOTSTRAP)), stale: true }
+      return {
+        value: StatsService.withBoosterList(
+          StatsService.asStale(StatsService.verified(SPACEXNOW_BOOTSTRAP)),
+          boosterList,
+        ),
+        stale: true,
+      }
     }
 
     try {
@@ -419,15 +451,21 @@ export class StatsService {
       // et un LL2 lent ne doit jamais retarder la réponse live.
       try {
         const ll2 = await withTimeout(this.ll2BoosterService.getBoosterStats(), 5_000, 'LL2 boosters')
-        if (ll2.stale) {
+        // Les agrégats LL2 ne remplacent les chiffres live que si le snapshot
+        // est frais ET que son roster est disponible : sans liste, on garde
+        // les agrégats spacexnow (cohérents avec landingSites par construction).
+        // La liste, elle, est propagée séparément ci-dessous même sur ce chemin.
+        if (ll2.stale || !ll2.value.list?.length) {
           console.warn(JSON.stringify({
             timestamp: new Date().toISOString(),
             event: 'll2_boosters_stale_ignored',
-            reason: 'LL2 booster snapshot is stale; keeping live spacexnow boosters',
+            reason: ll2.stale
+              ? 'LL2 booster snapshot is stale; keeping live spacexnow boosters'
+              : 'LL2 booster roster is unavailable; keeping live spacexnow aggregates',
           }))
         } else {
-          // Le roster LL2 remplace les agrégats spacexnow ; on propagera
-          // explicitement `list` pour qu'il survive au cache Zod /api/stats.
+          // Le roster LL2 remplace les agrégats spacexnow ; `list` est
+          // explicitement copiée pour survivre au cache Zod /api/stats.
           stats.boosters = { ...ll2.value, list: ll2.value.list }
         }
       } catch (ll2Error) {
@@ -438,7 +476,10 @@ export class StatsService {
         }))
       }
 
-      const verified = StatsService.verified(stats)
+      const verified = StatsService.withBoosterList(
+        StatsService.verified(stats),
+        boosterList,
+      )
       await this.cache.set(CACHE_KEY, verified)
       this.blockedUntil = 0
       return { value: verified, stale: false }
@@ -454,9 +495,21 @@ export class StatsService {
         status: error instanceof UpstreamError ? error.status : 502,
       }))
       if (cached) {
-        return { value: StatsService.asStale(StatsService.verified(cached.value)), stale: true }
+        return {
+          value: StatsService.withBoosterList(
+            StatsService.asStale(StatsService.verified(cached.value)),
+            boosterList,
+          ),
+          stale: true,
+        }
       }
-      return { value: StatsService.asStale(StatsService.verified(SPACEXNOW_BOOTSTRAP)), stale: true }
+      return {
+        value: StatsService.withBoosterList(
+          StatsService.asStale(StatsService.verified(SPACEXNOW_BOOTSTRAP)),
+          boosterList,
+        ),
+        stale: true,
+      }
     }
   }
 }

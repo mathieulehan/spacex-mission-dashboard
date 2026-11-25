@@ -10,6 +10,7 @@ import {
 
 const LL2_BASE_URL = 'https://ll.thespacedevs.com/2.2.0'
 const LL2_LANDINGS_CACHE_TTL = 60 * 60 * 1_000 // 1 heure
+const LL2_BOOSTER_LIST_CACHE_KEY = 'll2:booster-list'
 
 // UNIQUE snapshot de secours des boosters : partagé avec /api/stats.
 // Jamais présenté comme live par StatsService, qui ignore ce retour obsolète
@@ -21,6 +22,8 @@ export class LL2BoosterService {
   private cache: CacheStore
   private fetchImpl: typeof fetch
   private blockedUntil = 0
+  private listBlockedUntil = 0
+  private listInFlight: Promise<BoosterListItem[] | null> | null = null
 
   constructor(fetchImpl: typeof fetch, cache: CacheStore) {
     this.fetchImpl = fetchImpl
@@ -31,48 +34,92 @@ export class LL2BoosterService {
     return this.blockedUntil > Date.now() ? this.blockedUntil : null
   }
 
+  /**
+   * Roster des boosters : endpoint /launcher (2 pages) avec SON PROPRE cache
+   * et SON PROPRE cooldown. Il ne dépend pas des 19 pages de /landings/ :
+   * une erreur 429 sur les landings ne peut donc pas faire disparaître la
+   * liste. En échec, on ne renvoie que du déjà vu (cache ou rien), jamais une
+   * liste fabriquée.
+   */
+  async getBoosterList(): Promise<BoosterListItem[] | null> {
+    const cached = await this.cache.get(
+      LL2_BOOSTER_LIST_CACHE_KEY,
+      boosterListItemSchema.array(),
+    )
+    if (cached && Date.now() - cached.fetchedAt < LL2_LANDINGS_CACHE_TTL) {
+      return cached.value
+    }
+    if (this.listInFlight) return this.listInFlight
+    if (Date.now() < this.listBlockedUntil) return cached?.value ?? null
+
+    this.listInFlight = this.fetchBoosterList()
+      .then(async (list) => {
+        this.listBlockedUntil = 0
+        await this.cache.set(LL2_BOOSTER_LIST_CACHE_KEY, list)
+        return list
+      })
+      .catch((error) => {
+        this.listBlockedUntil = Date.now() + LL2_LANDINGS_CACHE_TTL
+        console.warn(JSON.stringify({
+          timestamp: new Date().toISOString(),
+          event: 'll2_booster_list_unavailable',
+          reason: error instanceof Error ? error.message : String(error),
+        }))
+        return cached?.value ?? null
+      })
+      .finally(() => {
+        this.listInFlight = null
+      })
+
+    return this.listInFlight
+  }
+
+  private async withBoosterList(stats: LL2BoosterStats): Promise<LL2BoosterStats> {
+    const list = await this.getBoosterList()
+    return list && list.length > 0 ? { ...stats, list } : stats
+  }
+
   async getBoosterStats(): Promise<{ value: LL2BoosterStats; stale: boolean }> {
     const cached = await this.cache.get('ll2:booster-stats', ll2BoosterStatsSchema)
     if (cached && Date.now() - cached.fetchedAt < LL2_LANDINGS_CACHE_TTL) {
-      return { value: cached.value, stale: false }
+      return { value: await this.withBoosterList(cached.value), stale: false }
     }
 
     if (Date.now() < this.blockedUntil) {
-      if (cached) return { value: cached.value, stale: true }
+      if (cached) return { value: await this.withBoosterList(cached.value), stale: true }
       console.warn(JSON.stringify({
         timestamp: new Date().toISOString(),
         event: 'll2_boosters_dated_fallback',
         asOf: LL2_BOOTSTRAP_FETCHED_AT,
         reason: 'LL2 cooldown active; serving the dated bootstrap',
       }))
-      return { value: LL2_BOOTSTRAP_BOOSTERS, stale: true }
+      return { value: await this.withBoosterList(LL2_BOOTSTRAP_BOOSTERS), stale: true }
     }
 
     try {
       const stats = await this.fetchAndComputeBoosterStats()
-      await this.cache.set('ll2:booster-stats', stats)
+      const withList = await this.withBoosterList(stats)
+      await this.cache.set('ll2:booster-stats', withList)
       this.blockedUntil = 0
-      return { value: stats, stale: false }
+      return { value: withList, stale: false }
     } catch (error) {
       this.blockedUntil = Date.now() + LL2_LANDINGS_CACHE_TTL
-      if (cached) return { value: cached.value, stale: true }
+      if (cached) return { value: await this.withBoosterList(cached.value), stale: true }
       console.warn(JSON.stringify({
         timestamp: new Date().toISOString(),
         event: 'll2_boosters_dated_fallback',
         asOf: LL2_BOOTSTRAP_FETCHED_AT,
         reason: error instanceof Error ? error.message : String(error),
       }))
-      return { value: LL2_BOOTSTRAP_BOOSTERS, stale: true }
+      return { value: await this.withBoosterList(LL2_BOOTSTRAP_BOOSTERS), stale: true }
     }
   }
 
   private async fetchAndComputeBoosterStats(): Promise<LL2BoosterStats> {
-    // Récupérer les landings depuis LL2 (pagination automatique)
+    // UNIQUE source des agrégats : les landings LL2. Le roster /launcher est
+    // désormais chargé par getBoosterList() (cache propre), pour que sa
+    // disponibilité ne dépende pas des 19 pages de /landings/.
     const allLandings = await this.fetchAllLandings()
-
-    // Roster des boosters : endpoint /launcher (2 pages à 100). Le filtre
-    // query launcher_config__id=164 est ignoré en 2.2.0 : on filtre ici.
-    const list = await this.fetchBoosterList()
 
     // Filtrer les landings Falcon 9
     const f9Landings = allLandings.filter((l) => l.firststage?.launcher?.id === 8)
@@ -186,11 +233,11 @@ export class LL2BoosterService {
       fastestPadTurnaroundCapeCanaveral: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaroundCapeCanaveral,
       fastestPadTurnaroundVandenberg: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaroundVandenberg,
       fastestPadTurnaroundStarbase: LL2_BOOTSTRAP_BOOSTERS.fastestPadTurnaroundStarbase,
-      list,
     }
   }
 
   private async fetchBoosterList(): Promise<BoosterListItem[]> {
+    // Le filtre query launcher_config__id=164 est ignoré en 2.2.0 : on filtre ici.
     const launchers = await this.fetchAllLaunchers()
     return launchers
       .filter((launcher) => launcher.launcher_config?.name === 'Falcon 9')

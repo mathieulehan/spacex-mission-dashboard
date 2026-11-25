@@ -1,4 +1,5 @@
 import request from 'supertest'
+import { readFileSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -489,5 +490,64 @@ describe('fresh mission data API', () => {
     } finally {
       await rm(directory, { recursive: true })
     }
+  })
+})
+
+describe('/api/stats — roster des boosters sous rate limit LL2', () => {
+  it('expose boosters.list quand /landings/ répond 429', async () => {
+    const fixture = (name: string): unknown =>
+      JSON.parse(
+        readFileSync(path.resolve(process.cwd(), 'server/fixtures', name), 'utf8'),
+      )
+    const html = readFileSync(
+      path.resolve(process.cwd(), 'server/fixtures/spacexnow-stats.html'),
+      'utf8',
+    )
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      const url = String(input)
+      if (url === 'https://spacexnow.com/stats') {
+        return new Response(html, { status: 200 })
+      }
+      if (url.includes('/landings/')) {
+        return new Response('rate limited', { status: 429 })
+      }
+      if (url.includes('/launcher/')) {
+        return new Response(
+          JSON.stringify(
+            fixture(
+              url.includes('offset=100')
+                ? 'll2-launchers-page2.json'
+                : 'll2-launchers-page1.json',
+            ),
+          ),
+          { status: 200 },
+        )
+      }
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+    const app = createApp({
+      fetchImpl: fetchMock,
+      starlinkCachePath: null,
+      ll2CachePath: null,
+    })
+
+    const response = await request(app).get('/api/stats').expect(200)
+
+    expect(response.body.boosters.list).toHaveLength(7)
+    expect(response.body.boosters.list[0]).toEqual({
+      serialNumber: 'B1067',
+      type: 'Falcon 9 Block 5',
+      flights: 37,
+      landed: 36,
+      attempted: 37,
+      landingRate: 97.3,
+      status: 'active',
+      lastFlight: '2026-11-20T12:00:00Z',
+    })
+    // Les agrégats live restent ceux de spacexnow : invariants préservés.
+    expect(response.body.boosters.totalAttempts).toBe(704)
+    expect(
+      fetchMock.mock.calls.filter((call) => String(call[0]).includes('/landings/')),
+    ).toHaveLength(1)
   })
 })

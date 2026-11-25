@@ -47,7 +47,7 @@ function memoryCache(): MemoryCache {
   }
 }
 
-function ll2Fetch(options: { launchersStatus?: number } = {}): ReturnType<typeof vi.fn> {
+function ll2Fetch(options: { launchersStatus?: number; landingsStatus?: number } = {}): ReturnType<typeof vi.fn> {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
     if (url.includes('/launcher/')) {
@@ -60,6 +60,9 @@ function ll2Fetch(options: { launchersStatus?: number } = {}): ReturnType<typeof
       })
     }
     if (url.includes('/landings/')) {
+      if (options.landingsStatus && options.landingsStatus !== 200) {
+        return new Response('rate limited', { status: options.landingsStatus })
+      }
       return new Response(JSON.stringify(LANDINGS), {
         status: 200,
         headers: { 'content-type': 'application/json' },
@@ -199,17 +202,45 @@ describe('liste des boosters LL2', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3) // 1 landing + 2 launchers, une seule fois
   })
 
-  it('échoue sans liste quand LL2 est indisponible (429)', async () => {
-    const fetchMock = ll2Fetch({ launchersStatus: 429 })
+  it('sert la liste même quand /landings/ est en 429 (agrégats en fallback daté)', async () => {
+    const fetchMock = ll2Fetch({ landingsStatus: 429 })
     const service = new LL2BoosterService(fetchMock as unknown as typeof fetch, memoryCache())
 
     const { value, stale } = await service.getBoosterStats()
 
     expect(stale).toBe(true)
-    expect(value.list).toBeUndefined()
+    expect(value.list).toHaveLength(7)
+    expect(value.list?.[0]).toEqual({
+      serialNumber: 'B1067',
+      type: 'Falcon 9 Block 5',
+      flights: 37,
+      landed: 36,
+      attempted: 37,
+      landingRate: 97.3,
+      status: 'active',
+      lastFlight: '2026-11-20T12:00:00Z',
+    })
+    // Les agrégats restent le bootstrap daté, aucune valeur inventée.
     expect(value.totalLanded).toBe(SPACEXNOW_BOOTSTRAP.boosters.totalLanded)
     expect(service.getRetryAt()).not.toBeNull()
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('ll2_boosters_dated_fallback'))
+
+    // La liste a son propre cache : un 2e appel ne recontacte pas /launcher/.
+    const callsBefore = fetchMock.mock.calls.length
+    await service.getBoosterStats()
+    expect(fetchMock).toHaveBeenCalledTimes(callsBefore)
+  })
+
+  it('/launcher/ en 429 ne casse pas les agrégats et ne fabrique pas de liste', async () => {
+    const fetchMock = ll2Fetch({ launchersStatus: 429 })
+    const service = new LL2BoosterService(fetchMock as unknown as typeof fetch, memoryCache())
+
+    const { value, stale } = await service.getBoosterStats()
+
+    expect(stale).toBe(false)
+    expect(value.list).toBeUndefined()
+    expect(value.totalLanded).toBe(2) // agrégats calculés depuis /landings/
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('ll2_booster_list_unavailable'))
   })
 })
 
@@ -290,5 +321,58 @@ describe('propagation de la liste dans /api/stats', () => {
     expect(result.value.boosters.list).toBeUndefined()
     expect(result.value.boosters.totalAttempts).toBe(704)
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('ll2_boosters_stale_ignored'))
+  })
+
+  it('sert boosters.list même quand /landings/ est rate-limité (429)', async () => {
+    const ll2FetchMock = ll2Fetch({ landingsStatus: 429 })
+    const ll2 = new LL2BoosterService(
+      ll2FetchMock as unknown as typeof fetch,
+      memoryCache(),
+    )
+    const service = new StatsService(statsFetch(), memoryCache(), ll2)
+
+    const result = await service.getStats()
+
+    expect(result.stale).toBe(false)
+    expect(result.value.boosters.list?.[0]).toEqual({
+      serialNumber: 'B1067',
+      type: 'Falcon 9 Block 5',
+      flights: 37,
+      landed: 36,
+      attempted: 37,
+      landingRate: 97.3,
+      status: 'active',
+      lastFlight: '2026-11-20T12:00:00Z',
+    })
+    expect(result.value.boosters.list).toHaveLength(7)
+    expect(result.value.boosters.list?.map((item) => item.serialNumber)).toEqual([
+      'B1067', 'B1061', 'B1058', 'B1056', 'B1047', 'B1023', 'B1005',
+    ])
+    expect(boosterListItemSchema.array().safeParse(result.value.boosters.list).success).toBe(true)
+    expect(statsSchema.safeParse(result.value).success).toBe(true)
+    // Les agrégats live restent intacts : les invariants /api/stats tiennent.
+    expect(result.value.boosters.totalAttempts).toBe(704)
+    expect(
+      ll2FetchMock.mock.calls.filter((call) => String(call[0]).includes('/landings/')),
+    ).toHaveLength(1)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('ll2_boosters_stale_ignored'))
+  })
+
+  it('garde boosters.list sur le chemin stale quand /landings/ est rate-limité', async () => {
+    const ll2 = new LL2BoosterService(
+      ll2Fetch({ landingsStatus: 429 }) as unknown as typeof fetch,
+      memoryCache(),
+    )
+    const failingStatsFetch = vi.fn(async () => {
+      throw new Error('ECONNREFUSED')
+    }) as unknown as typeof fetch
+    const service = new StatsService(failingStatsFetch, memoryCache(), ll2)
+
+    const result = await service.getStats()
+
+    expect(result.stale).toBe(true)
+    expect(result.value.source).toBe('fallback')
+    expect(result.value.boosters.list).toHaveLength(7)
+    expect(statsSchema.safeParse(result.value).success).toBe(true)
   })
 })

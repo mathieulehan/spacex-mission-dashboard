@@ -431,7 +431,7 @@ export function StatsDashboard() {
   return (
     <section className="section" id="stats" aria-busy={view === 'loading' ? 'true' : undefined}>
       <div className="section-heading">
-        <div className="section-index">05</div>
+        <div className="section-index">04</div>
         <div>
           <p className="eyebrow">Statistiques dynamiques</p>
           <h2>Performance SpaceX</h2>

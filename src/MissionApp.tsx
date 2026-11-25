@@ -527,9 +527,9 @@ function EventsSection() {
           </div>
           {filteredEvents.length ? (
             <div className="event-grid">{filteredEvents.map((event) => <EventCard event={event} key={event.id} />)}</div>
-          ) : <div className="empty">No events match these filters.</div>}
+          ) : <div className="empty">Aucun événement ne correspond à ces filtres.</div>}
         </>
-      ) : <div className="empty">No upcoming events are currently listed.</div>}
+      ) : <div className="empty">Aucun événement à venir n’est actuellement annoncé.</div>}
     </section>
   )
 }
@@ -738,7 +738,7 @@ function CacheStatusSection() {
   return (
     <section className="section" id="data-status">
       <SectionHeading
-        index="04"
+        index="05"
         eyebrow="Local persistence"
         title="Data cache status"
         description="Safe operational metadata for the on-disk SQLite cache. Cached payload contents remain server-side."

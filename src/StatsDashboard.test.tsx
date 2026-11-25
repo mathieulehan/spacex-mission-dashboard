@@ -513,7 +513,7 @@ describe('StatsDashboard — états loading / erreur / vide', () => {
       </QueryClientProvider>,
     )
 
-    expect(screen.queryByText('Aucune donnée de booster disponible.')).toBeNull()
+    expect(screen.queryByText('Le détail par booster n’est pas fourni par la source actuelle ; les agrégats sont dans la section Performance SpaceX.')).toBeNull()
     // Les deux sections partagent le même snapshot : même état d'attente.
     expect(document.querySelectorAll('[aria-busy="true"]').length).toBeGreaterThanOrEqual(2)
 

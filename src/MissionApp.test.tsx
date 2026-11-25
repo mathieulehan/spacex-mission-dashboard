@@ -200,7 +200,7 @@ describe('MissionApp', () => {
   it('renders the mobile bottom navigation alongside the desktop nav', () => {
     renderApp()
 
-    const mobileNav = screen.getByRole('navigation', { name: 'Navigation mobile' })
+    const mobileNav = screen.getByRole('navigation', { name: 'Navigation principale' })
     expect(mobileNav).toBeInTheDocument()
     expect(mobileNav).toBeVisible()
     expect(within(mobileNav).getAllByRole('link')).toHaveLength(4)

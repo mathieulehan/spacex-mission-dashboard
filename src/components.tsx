@@ -53,7 +53,7 @@ export function SectionHeading({
 
 export function Loading({ count = 3 }: { count?: number }) {
   return (
-    <div className="loading-grid" aria-label="Loading telemetry" aria-busy="true">
+    <div className="loading-grid" aria-label="Chargement des données" aria-busy="true">
       {Array.from({ length: count }, (_, index) => (
         <div className="loading-card" key={index}>
           <i />
@@ -76,11 +76,11 @@ export function ErrorState({
     <div className="error-state" role="alert">
       <span aria-hidden="true">!</span>
       <div>
-        <strong>Data link unavailable</strong>
+        <strong>Liaison de données indisponible</strong>
         <p>{message}</p>
       </div>
       <button type="button" onClick={retry}>
-        Retry
+        Réessayer
       </button>
     </div>
   )

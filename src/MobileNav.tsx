@@ -151,7 +151,7 @@ export default function MobileNav() {
   }
 
   return (
-    <nav className="mobile-nav" role="navigation" aria-label="Navigation mobile">
+    <nav className="mobile-nav" role="navigation" aria-label="Navigation principale">
       <ul className="mobile-nav__list">
         {NAV_ITEMS.map(({ id, label, Icon }) => (
           <li className="mobile-nav__item" key={id}>

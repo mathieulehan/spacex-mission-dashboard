@@ -1556,8 +1556,6 @@ footer > a { justify-self: end; }
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .boosters-table {
@@ -1633,6 +1631,13 @@ footer > a { justify-self: end; }
   gap: 2px;
 }
 
+.booster-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .booster-serial {
   font: 0.78rem 'Space Mono', monospace;
   color: white;
@@ -1661,6 +1666,51 @@ footer > a { justify-self: end; }
   white-space: nowrap;
 }
 
+/* ── Boosters pagination ──────────────────────────────────────────────────────── */
+
+.boosters-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.boosters-page-button {
+  display: inline-flex;
+  min-width: 44px; /* cible tactile WCAG 2.5.8 */
+  min-height: 44px; /* ≥ 44×44 px */
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #d5e8ff;
+  background: rgba(62, 132, 255, .08);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.boosters-page-button:hover:not(:disabled) {
+  border-color: var(--blue);
+  background: rgba(62, 132, 255, .18);
+}
+
+.boosters-page-button:disabled {
+  color: var(--muted);
+  background: transparent;
+  cursor: not-allowed;
+}
+
+.boosters-page-indicator {
+  color: var(--muted);
+  font: 0.72rem 'Space Mono', monospace;
+  white-space: nowrap;
+}
+
 /* ── Boosters responsive ──────────────────────────────────────────────────────── */
 
 @media (max-width: 640px) {
@@ -1673,14 +1723,114 @@ footer > a { justify-self: end; }
     width: 100%;
   }
 
-  .boosters-table th,
-  .boosters-table td {
-    padding: 10px 12px;
-    font-size: 0.78rem;
+  /* Plus de défilement horizontal : le tableau devient une pile de cartes. */
+  .boosters-table-wrap {
+    overflow: visible;
   }
 
   .boosters-table {
-    min-width: 440px;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    font-size: 0.82rem;
+  }
+
+  /* Les en-têtes triables restent accessibles sous forme de pastilles. */
+  .boosters-table thead {
+    display: block;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+  }
+
+  .boosters-table thead tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .boosters-table thead th {
+    display: none;
+  }
+
+  .boosters-table thead th.th-sortable {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-light);
+    font-size: 0.66rem;
+    white-space: nowrap;
+  }
+
+  .boosters-table thead th.th--asc,
+  .boosters-table thead th.th--desc {
+    border-color: rgba(105, 170, 255, .6);
+  }
+
+  .boosters-table tbody {
+    display: block;
+    padding: 12px 12px 4px;
+  }
+
+  .boosters-table tbody tr {
+    display: block;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .02);
+  }
+
+  .boosters-table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .boosters-table tbody td,
+  .boosters-table td.td-serial {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.78rem;
+    white-space: normal;
+  }
+
+  .boosters-table tbody td:last-child {
+    border-bottom: 0;
+  }
+
+  .boosters-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    color: var(--muted);
+    font: 0.58rem 'Space Mono', monospace;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .boosters-table .td-last-flight {
+    white-space: nowrap;
+  }
+
+  .boosters-pagination {
+    gap: 8px;
+    padding: 14px 12px;
+  }
+
+  .boosters-page-button {
+    flex: 1 1 0;
+    padding: 8px 10px;
+    font-size: 0.72rem;
+  }
+
+  .boosters-page-indicator {
+    font-size: 0.68rem;
   }
 }
 

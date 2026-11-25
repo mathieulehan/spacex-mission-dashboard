@@ -162,7 +162,7 @@ describe('MissionApp', () => {
 
     const eventSearch = screen.getByRole('searchbox', { name: 'Search events' })
     await user.type(eventSearch, 'crew')
-    expect(screen.getByText('No events match these filters.')).toBeInTheDocument()
+    expect(screen.getByText('Aucun événement ne correspond à ces filtres.')).toBeInTheDocument()
   })
 
   it('opens rich mission details inside the app', async () => {

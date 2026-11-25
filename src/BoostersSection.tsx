@@ -146,7 +146,7 @@ export function BoostersSection() {
   // afficher « aucune donnée » : ce serait un faux négatif pendant le chargement.
   if (isLoading || (!stats && !error)) return <Loading />;
   if (error && !stats) return <ErrorState message="Impossible de charger les données des boosters." retry={refetch} />;
-  if (!boosters.length) return <div className="empty">Aucune donnée de booster disponible.</div>;
+  if (!boosters.length) return <div className="empty">Le détail par booster n’est pas fourni par la source actuelle ; les agrégats sont dans la section Performance SpaceX.</div>;
 
   const globalRate = stats?.boosters?.landingRate ?? 0;
   // `total` est normalisé depuis `totalAttempts` ; lire la source explicite évite

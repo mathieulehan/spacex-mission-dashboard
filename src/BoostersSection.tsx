@@ -1,15 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type KeyboardEvent } from 'react';
 import { useStatsQuery } from './useStatsQuery';
 import { SectionHeading } from './components';
 import { Badge } from './components';
 import { Loading } from './components';
 import { ErrorState } from './components';
-import type { Booster, StatsBooster } from './types';  // import Booster, StatsBooster
+import type { Booster } from './types';
 
 // ── Sorting helpers ────────────────────────────────────────────────────────────
 
-type SortKey = 'serialNumber' | 'flights' | 'landingRate';
+type SortKey = 'serialNumber' | 'flights' | 'landed';
 type SortDir = 'asc' | 'desc';
+
+/** 10 lignes par page : le roster complet (87 boosters) reste parcourable. */
+const PAGE_SIZE = 10;
 
 function sortBoosters(boosters: Booster[], key: SortKey, dir: SortDir): Booster[] {
   const sorted = [...boosters];
@@ -20,19 +23,26 @@ function sortBoosters(boosters: Booster[], key: SortKey, dir: SortDir): Booster[
     } else if (key === 'flights') {
       cmp = a.flights - b.flights;
     } else {
-      cmp = a.landingRate - b.landingRate;
+      // "Atterrissages" se trie par nombre de réussites, pas par taux.
+      cmp = a.landed - b.landed;
     }
     return dir === 'desc' ? -cmp : cmp;
   });
   return sorted;
 }
 
-// ── Status badge for landing rate ──────────────────────────────────────────────
+function ariaSort(active: boolean, dir: SortDir): 'none' | 'ascending' | 'descending' {
+  if (!active) return 'none';
+  return dir === 'asc' ? 'ascending' : 'descending';
+}
 
-function LandingRateBadge({ rate }: { rate: number }) {
-  if (rate >= 95) return <Badge tone="go">{rate.toFixed(1)}%</Badge>;
-  if (rate >= 85) return <Badge tone="warning">{rate.toFixed(1)}%</Badge>;
-  return <Badge tone="risk">{rate.toFixed(1)}%</Badge>;
+function onSortKeyDown(toggle: () => void) {
+  return (event: KeyboardEvent<HTMLTableCellElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      toggle();
+    }
+  };
 }
 
 // ── Global landing rate hero ───────────────────────────────────────────────────
@@ -58,8 +68,13 @@ function GlobalLandingRate({ rate, total, landed }: { rate: number; total: numbe
 function BoostersTable({ boosters }: { boosters: Booster[] }) {
   const [sortKey, setSortKey] = useState<SortKey>('flights');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [page, setPage] = useState(1);
 
   const sorted = useMemo(() => sortBoosters(boosters, sortKey, sortDir), [boosters, sortKey, sortDir]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  // Un refetch peut réduire l'effectif : on borne l'index sans état asynchrone.
+  const currentPage = Math.min(page, totalPages);
+  const pageBoosters = sorted.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -68,10 +83,34 @@ function BoostersTable({ boosters }: { boosters: Booster[] }) {
       setSortKey(key);
       setSortDir('desc');
     }
+    // Un nouveau tri reprend toujours au début du classement.
+    setPage(1);
   }
 
-  function headerClass(dir: SortDir | null) {
-    return dir === 'asc' ? 'th--asc' : dir === 'desc' ? 'th--desc' : '';
+  function headerClass(key: SortKey) {
+    return sortKey === key ? headerClassFromDir(sortDir) : '';
+  }
+
+  function headerClassFromDir(dir: SortDir) {
+    return dir === 'asc' ? 'th--asc' : 'th--desc';
+  }
+
+  function sortableHeader(key: SortKey, label: string) {
+    return (
+      <th
+        scope="col"
+        className={`th-sortable ${headerClass(key)}`}
+        aria-sort={ariaSort(sortKey === key, sortDir)}
+        tabIndex={0}
+        onClick={() => toggleSort(key)}
+        onKeyDown={onSortKeyDown(() => toggleSort(key))}
+      >
+        <span className="th-content">
+          {label}
+          <span className="th-sort-arrow">{sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
+        </span>
+      </th>
+    );
   }
 
   return (
@@ -79,57 +118,63 @@ function BoostersTable({ boosters }: { boosters: Booster[] }) {
       <table className="boosters-table">
         <thead>
           <tr>
-            <th className={`th-sortable ${headerClass(sortKey === 'serialNumber' ? sortDir : null)}`} onClick={() => toggleSort('serialNumber')}>
-              <span className="th-content">
-                Boosters
-                <span className="th-sort-arrow">{sortKey === 'serialNumber' ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
-              </span>
-            </th>
-            <th className={`th-sortable ${headerClass(sortKey === 'flights' ? sortDir : null)}`} onClick={() => toggleSort('flights')}>
-              <span className="th-content">
-                Vol
-                <span className="th-sort-arrow">{sortKey === 'flights' ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
-              </span>
-            </th>
-            <th className={`th-sortable ${headerClass(sortKey === 'landingRate' ? sortDir : null)}`} onClick={() => toggleSort('landingRate')}>
-              <span className="th-content">
-                Atterrissages
-                <span className="th-sort-arrow">{sortKey === 'landingRate' ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>
-              </span>
-            </th>
-            <th>Taux</th>
-            <th>Statut</th>
-            <th>Dernier vol</th>
+            {sortableHeader('serialNumber', 'Boosters')}
+            {sortableHeader('flights', 'Vol')}
+            {sortableHeader('landed', 'Atterrissages')}
+            <th scope="col">Statut</th>
+            <th scope="col">Dernier vol</th>
           </tr>
         </thead>
         <tbody>
-          {sorted.map((b) => (
+          {pageBoosters.map((b) => (
             <tr key={b.serialNumber}>
-              <td className="td-serial">
-                <span className="booster-serial">{b.serialNumber}</span>
-                <span className="booster-type">{b.type}</span>
+              <td className="td-serial" data-label="Booster">
+                <span className="booster-identity">
+                  <span className="booster-serial">{b.serialNumber}</span>
+                  <span className="booster-type">{b.type}</span>
+                </span>
               </td>
-              <td>{b.flights}</td>
-              <td>
+              <td data-label="Vols">{b.flights}</td>
+              <td data-label="Atterrissages">
                 <span className="landing-stats">
                   {b.landed}<span className="landing-divider">/</span>{b.attempted}
                 </span>
               </td>
-              <td>
-                <LandingRateBadge rate={b.landingRate} />
-              </td>
-              <td>
+              <td data-label="Statut">
                 <Badge tone={b.status === 'active' ? 'go' : 'warning'}>
                   {b.status === 'active' ? 'Actif' : b.status === 'retired' ? 'Retiré' : 'Perdu'}
                 </Badge>
               </td>
-              <td className="td-last-flight">
+              <td className="td-last-flight" data-label="Dernier vol">
                 {b.lastFlight ? new Date(b.lastFlight).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      <div className="boosters-pagination">
+        <button
+          type="button"
+          className="boosters-page-button"
+          aria-label="Page précédente"
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={currentPage === 1}
+        >
+          ← Précédent
+        </button>
+        <span className="boosters-page-indicator" aria-live="polite">
+          Page {currentPage} / {totalPages}
+        </span>
+        <button
+          type="button"
+          className="boosters-page-button"
+          aria-label="Page suivante"
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={currentPage === totalPages}
+        >
+          Suivant →
+        </button>
+      </div>
     </div>
   );
 }

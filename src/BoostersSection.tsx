@@ -159,7 +159,7 @@ export function BoostersSection() {
   return (
     <section className="section" id="boosters">
       <SectionHeading
-        index="06"
+        index="05"
         eyebrow="Fusées réutilisables"
         title="Boosters"
         description={`${boosters.length} boosters trackés · ${activeCount} actifs · ${totalAttempts} essais d'atterrissage`}

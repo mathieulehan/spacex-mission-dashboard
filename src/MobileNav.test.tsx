@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -48,7 +49,7 @@ function renderNav() {
 }
 
 function navLinks() {
-  return within(screen.getByRole('navigation', { name: 'Navigation mobile' })).getAllByRole('link')
+  return within(screen.getByRole('navigation', { name: 'Navigation principale' })).getAllByRole('link')
 }
 
 describe('MobileNav', () => {
@@ -65,7 +66,7 @@ describe('MobileNav', () => {
   it('renders four labelled, linked sections with decorative icons', () => {
     renderNav()
 
-    expect(screen.getByRole('navigation', { name: 'Navigation mobile' })).toBeVisible()
+    expect(screen.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible()
     const links = navLinks()
     expect(links).toHaveLength(4)
     ITEMS.forEach((item, index) => {
@@ -110,6 +111,25 @@ describe('MobileNav', () => {
     expect(document.getElementById('starlink')).toHaveAttribute('tabindex', '-1')
   })
 
+  it('parcours clavier : Tab/Shift+Tab sans piège, Entrée déplace le focus', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('IntersectionObserver', undefined)
+    renderNav()
+
+    const links = navLinks()
+    for (const link of links) {
+      await user.tab()
+      expect(document.activeElement).toBe(link)
+    }
+    await user.tab({ shift: true })
+    expect(document.activeElement).toBe(links[2])
+
+    links[3].focus()
+    await user.keyboard('{Enter}')
+    expect(links[3]).toHaveAttribute('aria-current', 'page')
+    expect(document.activeElement).toBe(document.getElementById('data-status'))
+  })
+
   it('is hidden on desktop and reserves safe-area and touch-target space on mobile', () => {
     const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8')
     const start = css.indexOf('@media (max-width: 950px)')
@@ -119,6 +139,8 @@ describe('MobileNav', () => {
     expect(mobileBlock).toContain('.header nav { display: none; }')
     expect(mobileBlock).toContain('.mobile-nav { display: block; }')
     expect(mobileBlock).toContain('env(safe-area-inset-bottom, 0px)')
+    expect(mobileBlock).toContain('padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px))')
+    expect(css).toMatch(/\.mobile-nav__link \{[^}]*min-width: 44px/s)
     expect(css).toMatch(/\.mobile-nav__link \{[^}]*min-height: 56px/s)
   })
 })

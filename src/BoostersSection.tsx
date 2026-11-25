@@ -1,6 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
-import { statsApi } from './api';
+import { useStatsQuery } from './useStatsQuery';
 import { SectionHeading } from './components';
 import { Badge } from './components';
 import { Loading } from './components';
@@ -138,17 +137,14 @@ function BoostersTable({ boosters }: { boosters: Booster[] }) {
 // ── Boosters Section ───────────────────────────────────────────────────────────
 
 export function BoostersSection() {
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['stats'],
-    queryFn: () => statsApi.getStats(),
-    staleTime: 60_000,
-    retry: 1,
-  });
+  const { data, isLoading, error, refetch } = useStatsQuery();
 
   const stats = data;
   const boosters = stats?.boosters?.list ?? []  // StatsBooster.list existe;
 
-  if (isLoading) return <Loading />;
+  // Tant que le snapshot partagé n'est pas disponible, aucune section ne doit
+  // afficher « aucune donnée » : ce serait un faux négatif pendant le chargement.
+  if (isLoading || (!stats && !error)) return <Loading />;
   if (error && !stats) return <ErrorState message="Impossible de charger les données des boosters." retry={refetch} />;
   if (!boosters.length) return <div className="empty">Aucune donnée de booster disponible.</div>;
 

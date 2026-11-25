@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { positionToCartesian } from './earth-geometry'
 import { WORLD_POLYGONS } from './earth-geography'
+import { useReducedMotion } from './useReducedMotion'
 import type { StarlinkSummary } from './types'
 
 function createEarthTexture() {
@@ -70,6 +71,10 @@ function createEarthTexture() {
 export function EarthGlobe({ data }: { data: StarlinkSummary }) {
   const hostRef = useRef<HTMLDivElement>(null)
   const [renderError, setRenderError] = useState(false)
+  // L'auto-rotation est une animation JS : la règle CSS `prefers-reduced-motion`
+  // ne l'arrête pas. On la désactive ici, tout en gardant un rendu statique
+  // interactive (drag / resize) pour les utilisateurs qui préfèrent moins de mouvement.
+  const reducedMotion = useReducedMotion()
 
   useEffect(() => {
     if (import.meta.env.MODE === 'test' || !hostRef.current) return
@@ -156,6 +161,12 @@ export function EarthGlobe({ data }: { data: StarlinkSummary }) {
     let dragging = false
     let previousX = 0
     let previousY = 0
+    // Une seule image à la demande si le mouvement est réduit ; sinon la
+    // boucle rAF ci-dessous avance la rotation. Le drag reste disponible.
+    const renderFrame = (advance: boolean) => {
+      if (advance && !dragging) globe.rotation.y += 0.0012
+      renderer.render(scene, camera)
+    }
     const pointerDown = (event: PointerEvent) => {
       dragging = true
       previousX = event.clientX
@@ -171,6 +182,7 @@ export function EarthGlobe({ data }: { data: StarlinkSummary }) {
       )
       previousX = event.clientX
       previousY = event.clientY
+      if (reducedMotion) renderFrame(false)
     }
     const pointerUp = () => {
       dragging = false
@@ -185,6 +197,7 @@ export function EarthGlobe({ data }: { data: StarlinkSummary }) {
       renderer.setSize(width, height, false)
       camera.aspect = width / Math.max(height, 1)
       camera.updateProjectionMatrix()
+      if (reducedMotion) renderFrame(false)
     }
     const resizeObserver = new ResizeObserver(resize)
     resizeObserver.observe(host)
@@ -192,11 +205,12 @@ export function EarthGlobe({ data }: { data: StarlinkSummary }) {
 
     let frame = 0
     const animate = () => {
-      if (!dragging) globe.rotation.y += 0.0012
-      renderer.render(scene, camera)
+      renderFrame(true)
       frame = requestAnimationFrame(animate)
     }
-    animate()
+    // `prefers-reduced-motion: reduce` : une image statique, aucune boucle rAF.
+    if (reducedMotion) renderFrame(false)
+    else frame = requestAnimationFrame(animate)
 
     return () => {
       cancelAnimationFrame(frame)
@@ -214,7 +228,7 @@ export function EarthGlobe({ data }: { data: StarlinkSummary }) {
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [data.positions])
+  }, [data.positions, reducedMotion])
 
   return (
     <div

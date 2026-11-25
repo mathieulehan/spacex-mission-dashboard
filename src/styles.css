@@ -798,6 +798,7 @@ dd { margin: 6px 0 0; font-size: .72rem; line-height: 1.45; }
 .error-state p { margin: 5px 0 0; color: var(--muted); font-size: .8rem; }
 .error-state button {
   margin-left: auto;
+  min-height: 44px; /* cible tactile ≥ 44×44 px */
   padding: 9px 13px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -834,8 +835,8 @@ dd { margin: 6px 0 0; font-size: .72rem; line-height: 1.45; }
   top: 0;
   z-index: 2;
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   margin: 0 0 20px auto;
   place-items: center;
   border: 1px solid var(--line);
@@ -1039,6 +1040,7 @@ footer > a { justify-self: end; }
   align-items: center;
   justify-content: center;
   gap: 4px;
+  min-width: 44px; /* cible tactile WCAG 2.5.8 */
   min-height: 56px; /* ≥ 44px touch target */
   padding: 6px 4px;
   color: var(--muted);
@@ -1061,7 +1063,10 @@ footer > a { justify-self: end; }
 @media (max-width: 950px) {
   .header { grid-template-columns: 1fr auto; }
   .header nav { display: none; }
-  .app { padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
+  /* La barre fixe mesure 56 px + safe-area ; on réserve 72 px + safe-area pour
+     que le dernier contenu (footer / « Data status ») ne soit jamais masqué,
+     même si un libellé de nav passe sur deux lignes à 390×844. */
+  .app { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
   .mobile-nav { display: block; }
   .mission-hero { grid-template-columns: 1fr; }
   .mission-hero__image { height: 350px; }
@@ -1677,4 +1682,221 @@ footer > a { justify-self: end; }
   .boosters-table {
     min-width: 440px;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Stats dashboard — classes actually rendered by StatsDashboard.tsx.
+   Kept after the legacy .stats-* rules above so the live markup always wins.
+   --------------------------------------------------------------------------- */
+
+.stats-counters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  transition: border-color .2s, box-shadow .2s;
+}
+.stat-card:hover {
+  border-color: var(--blue);
+  box-shadow: 0 0 24px rgba(105, 170, 255, .08);
+}
+.stat-card__label {
+  margin: 0;
+  color: var(--muted);
+  font-size: .7rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.stat-card__value {
+  margin: 0;
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+.stat-card__sub {
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.4;
+}
+
+.stats-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.stat-chart-panel {
+  min-width: 0;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.stat-chart-panel .panel-label {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: .7rem;
+}
+.stat-chart { min-width: 0; }
+.stat-chart svg {
+  display: block;
+  width: 100%;
+  height: 220px;
+}
+.stat-chart__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 220px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.stats-boosters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.stat-boosters__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-light);
+}
+.stat-boosters__label {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.stat-boosters__value {
+  font-size: clamp(21px, 2vw, 28px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+.stat-boosters__value small {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: .75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 950px) {
+  .stats-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats-charts { grid-template-columns: 1fr; }
+  .stat-chart svg, .stat-chart__empty { height: 200px; }
+}
+
+@media (max-width: 650px) {
+  .stats-counters { gap: 10px; margin-top: 18px; }
+  .stat-card { gap: 5px; padding: 14px 14px 16px; }
+  .stat-card__label { font-size: .62rem; }
+  .stat-card__value { font-size: clamp(24px, 7vw, 30px); }
+  .stat-card__sub { font-size: .72rem; }
+  .stat-chart-panel { padding: 14px 14px 16px; }
+  .stat-chart-panel .panel-label { margin-bottom: 10px; }
+  .stat-chart svg, .stat-chart__empty { height: 180px; }
+  .stats-boosters { grid-template-columns: 1fr; gap: 10px; }
+  .stat-boosters__card { padding: 14px 16px; }
+}
+
+/* ---------------------------------------------------------------------------
+   Loading / erreur / snapshot de secours.
+   Le squelette reprend EXACTEMENT la grille définitive (4 KPI + 2 panneaux) :
+   plus de trou de 600 px, et aucune section voisine ne peut annoncer « aucune
+   donnée » pendant que ce chargement est en cours.
+   --------------------------------------------------------------------------- */
+
+.loading-card--kpi {
+  min-height: 132px;
+  padding: 18px 20px;
+}
+.loading-card--kpi i:last-child { width: 62%; margin-bottom: 0; }
+
+.loading-card--panel {
+  min-height: 264px;
+  padding: 18px 20px;
+}
+.loading-card--panel i:last-child {
+  height: 150px;
+  margin-bottom: 0;
+  border-radius: 10px;
+}
+
+.error-state { flex-wrap: wrap; }
+.error-state strong { color: #fff; font-size: .95rem; }
+.error-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-left: auto;
+}
+/* `.error-state button` posait margin-left:auto : neutralisé pour les 2 actions. */
+.error-state__actions button { margin-left: 0; }
+.error-state button:hover,
+.stats-fallback-notice button:hover { border-color: var(--blue); }
+.error-state button:focus-visible,
+.stats-fallback-notice button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.stats-fallback-notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin-top: 20px;
+  padding: 14px 18px;
+  border: 1px solid var(--amber);
+  border-radius: var(--radius);
+  background: rgba(245, 178, 83, .06);
+}
+.stats-fallback-notice strong { color: var(--amber); font-size: .85rem; }
+.stats-fallback-notice span { color: var(--muted); font-size: .8rem; }
+.stats-fallback-notice button {
+  margin-left: auto;
+  min-height: 44px; /* cible tactile ≥ 44×44 px */
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+}
+
+@media (max-width: 650px) {
+  .loading-card--kpi { min-height: 116px; padding: 14px; }
+  .loading-card--panel { min-height: 230px; padding: 14px; }
+  .stats-loading .stats-counters { gap: 10px; }
+  .error-state__actions { width: 100%; margin-left: 0; }
+  .stats-fallback-notice button { margin-left: 0; }
 }
